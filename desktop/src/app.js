@@ -59,7 +59,7 @@
       }
       const payload = await response.json();
       if (payload && payload.started !== false) {
-        setState("ready", "本地服务已就绪", "正在打开微日报只读工作台…", `已完成第 ${attempt} 次检查`);
+        setState("ready", "本地服务已就绪", "正在打开微语只读工作台…", `已完成第 ${attempt} 次检查`);
         nodes.retry.disabled = true;
         nodes.browser.hidden = false;
         window.clearTimeout(timer);
@@ -72,7 +72,7 @@
       setState(
         "",
         "正在等待本机服务",
-        "微日报还没有准备好，桌面会继续检查 127.0.0.1:8765。",
+        "微语还没有准备好，桌面会继续检查 127.0.0.1:8765。",
         `${detail} · 第 ${attempt} 次检查`,
       );
       schedule();
@@ -86,7 +86,7 @@
     nodes.browser.hidden = true;
     setState(
       "",
-      force ? "正在重启本桌面启动的服务" : "正在启动微日报服务",
+      force ? "正在重启本桌面启动的服务" : "正在启动微语服务",
       "正在确认现有健康服务；如果没有，则使用项目 .venv Python（开发）或 PyInstaller sidecar（生产）。",
       "只会关闭本桌面自己启动的子进程",
     );

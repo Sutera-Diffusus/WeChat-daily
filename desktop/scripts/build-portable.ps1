@@ -117,9 +117,10 @@ if ($portableRootFull -ne $expectedPortableRoot) {
     throw "Safety check failed: output directory is not the exact output/portable path: $portableRootFull"
 }
 
-$microDaily = -join ([char]0x5FAE, [char]0x65E5, [char]0x62A5)
 $portableWord = -join ([char]0x4FBF, [char]0x643A, [char]0x7248)
-$bundleName = "$microDaily-$portableWord-$version-win-x64"
+$productName = [string]$tauriConfig.productName
+if ([string]::IsNullOrWhiteSpace($productName)) { throw "Unable to read productName from $tauriConfigPath." }
+$bundleName = "$productName-$portableWord-$version-win-x64"
 $bundleRoot = Join-Path $portableRoot $bundleName
 $zipPath = Join-Path $portableRoot "$bundleName.zip"
 $readmeSource = Join-Path $scriptDir 'PORTABLE.md'

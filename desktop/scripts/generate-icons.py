@@ -33,7 +33,7 @@ def main() -> None:
     for name, size in (("32x32.png", 32), ("128x128.png", 128), ("128x128@2x.png", 256), ("icon.png", 512)):
         source.resize((size, size), Image.Resampling.LANCZOS).save(OUT / name)
     source.save(OUT / "icon.ico", sizes=[(16,16), (24,24), (32,32), (48,48), (64,64), (128,128), (256,256)])
-    print(f"Generated Wei Daily icons in {OUT}")
+    print(f"Generated Weiyu icons in {OUT}")
 
 
 if __name__ == "__main__":
