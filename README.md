@@ -18,6 +18,7 @@
 
 - [特性](#特性)
 - [产品预览](#产品预览)
+- [下载与发布包](#下载与发布包)
 - [功能详解](#功能详解)
 - [安装要求](#安装要求)
 - [桌面版快速开始](#桌面版快速开始)
@@ -78,6 +79,21 @@
 | <img src="docs/images/product-preview/small-things.png" alt="微日报小事列表" width="560"> | **小事**：保留低信号但可能有后续价值的日常消息，既不把它们混进主线，也不让它们悄悄消失。[查看原图](docs/images/product-preview/small-things.png) |
 | <img src="docs/images/product-preview/conversations.png" alt="微日报会话浏览" width="560"> | **会话**：按聊天查看原始消息、图片/文件/语音类型、媒体路径和会话统计，支持回到原始证据。[查看原图](docs/images/product-preview/conversations.png) |
 | <img src="docs/images/product-preview/workbench.png" alt="微日报工作台与分析" width="560"> | **工作台 / 分析**：集中查看待处理候选、事件主线、主题脉络、当前判断和分析指标；默认只读，不会因为出现候选就自动发送消息。[查看原图](docs/images/product-preview/workbench.png) |
+
+## 下载与发布包
+
+Windows 0.1.4 发布包已经放在本仓库的 [GitHub Release v0.1.4](https://github.com/Sutera-Diffusus/wei-daily/releases/tag/v0.1.4) 中。由于安装包和便携包都超过 GitHub 普通仓库单文件限制，它们作为 Release 资产提供下载，下面的链接可以直接跳转：
+
+- [下载 Windows 安装包](https://github.com/Sutera-Diffusus/wei-daily/releases/download/v0.1.4/wei-daily-0.1.4-windows-installer.exe)：运行安装向导，安装后从开始菜单或桌面快捷方式启动；
+- [下载 Windows 便携包](https://github.com/Sutera-Diffusus/wei-daily/releases/download/v0.1.4/wei-daily-0.1.4-windows-portable.zip)：完整解压后运行文件夹内的 `wei-daily-desktop.exe`；
+- [查看 Release 页面](https://github.com/Sutera-Diffusus/wei-daily/releases/tag/v0.1.4)：查看版本说明、文件大小和其它校验信息。
+
+下载后可按下面的 SHA256 值核对文件完整性：
+
+| 文件 | SHA256 |
+| --- | --- |
+| `wei-daily-0.1.4-windows-installer.exe` | `35F66AA45A6B5158D717D011D1D327C42218E340376B97F34313776C4277CFF3` |
+| `wei-daily-0.1.4-windows-portable.zip` | `63700BB9F995C9D28185EF32D6FFDB539E9BAF20FF79C83EB00BFAF1CF34DC54` |
 
 ## 功能详解
 
