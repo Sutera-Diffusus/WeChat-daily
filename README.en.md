@@ -1,8 +1,8 @@
 <div align="center">
   <a href="https://github.com/Sutera-Diffusus/WeChat-daily">
-    <img src="src/wechat_bridge/web/assets/editorial/wei-daily-logo.svg" alt="Weiyu logo" width="96">
+    <img src="src/wechat_bridge/web/assets/editorial/wei-daily-logo.svg" alt="LiteChat logo" width="96">
   </a>
-  <h1>Weiyu</h1>
+  <h1>LiteChat</h1>
   <p>A local-first Windows workspace for WeChat briefings, history, and intelligence analysis.</p>
   <p>
     <a href="README.md">中文 README</a>
@@ -10,16 +10,13 @@
     <a href="https://github.com/Sutera-Diffusus/WeChat-daily/releases/tag/v0.1.4">v0.1.4 Release</a>
   </p>
 
-  <table>
-    <tr>
-      <td><strong>Release</strong><br><a href="CHANGELOG.md">v0.1.4</a></td>
-      <td><strong>Downloads</strong><br><a href="https://github.com/Sutera-Diffusus/WeChat-daily/releases/tag/v0.1.4"><img src="https://img.shields.io/github/downloads/Sutera-Diffusus/WeChat-daily/v0.1.4/total?label=downloads&amp;color=31df76" alt="v0.1.4 downloads"></a></td>
-    </tr>
-    <tr>
-      <td><strong>Software size</strong><br>Installer 101 MiB<br>Portable 101 MiB</td>
-      <td><strong>License</strong><br><a href="LICENSE">MIT</a></td>
-    </tr>
-  </table>
+  <p>
+    <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.1.4-4da3ff" alt="Version 0.1.4"></a>
+    <a href="https://github.com/Sutera-Diffusus/WeChat-daily/releases/tag/v0.1.4"><img src="https://img.shields.io/github/downloads/Sutera-Diffusus/WeChat-daily/v0.1.4/total?label=downloads&amp;color=31df76" alt="v0.1.4 downloads"></a>
+    <a href="https://github.com/Sutera-Diffusus/WeChat-daily/releases/download/v0.1.4/weiyu-0.1.4-windows-installer.exe"><img src="https://img.shields.io/badge/installer-101%20MiB-31df76" alt="Installer 101 MiB"></a>
+    <a href="https://github.com/Sutera-Diffusus/WeChat-daily/releases/download/v0.1.4/weiyu-0.1.4-windows-portable.zip"><img src="https://img.shields.io/badge/portable-101%20MiB-31df76" alt="Portable 101 MiB"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-6f42c1" alt="MIT license"></a>
+  </p>
 
   <p>
     <a href="https://github.com/Sutera-Diffusus/WeChat-daily/releases/download/v0.1.4/weiyu-0.1.4-windows-installer.exe">Download installer</a>
@@ -30,22 +27,21 @@
   </p>
 
   <p>
-    <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.1.4-4da3ff" alt="Version 0.1.4"></a>
     <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.9--3.12-3776AB?logo=python&amp;logoColor=white" alt="Python 3.9 to 3.12"></a>
     <a href="desktop/"><img src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&amp;logoColor=white" alt="Tauri 2"></a>
     <a href="https://github.com/Sutera-Diffusus/WeChat-daily/releases"><img src="https://img.shields.io/badge/platform-Windows-0078D4?logo=windows&amp;logoColor=white" alt="Windows"></a>
   </p>
 </div>
 
-> <code>WeChat → adapter → normalized messages → SQLite → daily / weekly archive → explainable analysis → Weiyu workspace</code>
+> <code>WeChat → adapter → normalized messages → SQLite → daily / weekly archive → explainable analysis → LiteChat workspace</code>
 >
 > v0.1.4 defaults to <strong>receive and read-only analysis</strong>: historical imports do not create reply tasks, and sending remains preview / test-only behind a runtime guard.
 
 ---
 
-## What Weiyu does
+## What LiteChat does
 
-Weiyu lives on your Windows machine and turns scattered WeChat conversations into dated, traceable briefings. It keeps the original context, gives each conclusion a way back to its source message, and leaves the final decision with you. The default workflow receives and analyzes local data; it does not send messages automatically.
+LiteChat lives on your Windows machine and turns scattered WeChat conversations into dated, traceable briefings. It keeps the original context, gives each conclusion a way back to its source message, and leaves the final decision with you. The default workflow receives and analyzes local data; it does not send messages automatically.
 
 The workflow is simple:
 
@@ -53,12 +49,12 @@ The workflow is simple:
 
 ## Launch poster
 
-![Weiyu launch poster](docs/images/marketing/weiyu-launch-poster-0.1.4.png)
+![LiteChat launch poster](docs/images/marketing/weiyu-launch-poster-0.1.4.png)
 
 ## Contents
 
 - [Features](#features)
-- [What Weiyu does](#what-weiyu-does)
+- [What LiteChat does](#what-litechat-does)
 - [Launch poster](#launch-poster)
 - [Product preview](#product-preview)
 - [Downloads](#downloads)
@@ -66,7 +62,7 @@ The workflow is simple:
 - [Requirements](#requirements)
 - [Quick start](#quick-start)
 - [Beginner tutorial](#beginner-tutorial)
-- [Weiyu workspace](#weiyu-workspace)
+- [LiteChat workspace](#litechat-workspace)
 - [Desktop app](#desktop-app)
 - [Rules and AI](#rules-and-ai)
 - [API and Codex plugin](#api-and-codex-plugin)
@@ -113,21 +109,21 @@ The workflow is simple:
 
 ## Product preview
 
-These are screenshots of the local Weiyu workspace. Chat names, contacts, and parts of the message text have been blurred. The images show layout only; no runtime chat database is committed to the repository.
+These are screenshots of the local LiteChat workspace. Chat names, contacts, and parts of the message text have been blurred. The images show layout only; no runtime chat database is committed to the repository.
 
 | Page | Description |
 | --- | --- |
-| <img src="docs/images/product-preview/overview.png" alt="Weiyu overview and daily thread" width="560"> | **Overview / daily thread**: choose a date range, review message volume, chat count, key candidates, pending items, and speech transcription progress, then read what happened today. [Open image](docs/images/product-preview/overview.png) |
-| <img src="docs/images/product-preview/daily-edition.png" alt="Weiyu daily edition" width="560"> | **Daily edition**: turns high-signal messages into a readable page with topics, judgments, tags, and an evidence appendix. [Open image](docs/images/product-preview/daily-edition.png) |
-| <img src="docs/images/product-preview/small-things.png" alt="Weiyu small things list" width="560"> | **Small things**: keeps lower-signal messages that may matter later without mixing them into the main thread or losing them completely. [Open image](docs/images/product-preview/small-things.png) |
-| <img src="docs/images/product-preview/conversations.png" alt="Weiyu conversation browser" width="560"> | **Conversations**: browse original messages by chat, inspect image, file, and voice types, and return to the original evidence. [Open image](docs/images/product-preview/conversations.png) |
-| <img src="docs/images/product-preview/workbench.png" alt="Weiyu workbench and analysis" width="560"> | **Workbench / analysis**: review pending candidates, event threads, topics, current judgments, and analysis metrics in one place. The default mode is read-only. [Open image](docs/images/product-preview/workbench.png) |
+| <img src="docs/images/product-preview/overview.png" alt="LiteChat overview and daily thread" width="560"> | **Overview / daily thread**: choose a date range, review message volume, chat count, key candidates, pending items, and speech transcription progress, then read what happened today. [Open image](docs/images/product-preview/overview.png) |
+| <img src="docs/images/product-preview/daily-edition.png" alt="LiteChat daily edition" width="560"> | **Daily edition**: turns high-signal messages into a readable page with topics, judgments, tags, and an evidence appendix. [Open image](docs/images/product-preview/daily-edition.png) |
+| <img src="docs/images/product-preview/small-things.png" alt="LiteChat small things list" width="560"> | **Small things**: keeps lower-signal messages that may matter later without mixing them into the main thread or losing them completely. [Open image](docs/images/product-preview/small-things.png) |
+| <img src="docs/images/product-preview/conversations.png" alt="LiteChat conversation browser" width="560"> | **Conversations**: browse original messages by chat, inspect image, file, and voice types, and return to the original evidence. [Open image](docs/images/product-preview/conversations.png) |
+| <img src="docs/images/product-preview/workbench.png" alt="LiteChat workbench and analysis" width="560"> | **Workbench / analysis**: review pending candidates, event threads, topics, current judgments, and analysis metrics in one place. The default mode is read-only. [Open image](docs/images/product-preview/workbench.png) |
 
 ## Downloads
 
-Windows release packages for Weiyu 0.1.4 are available from [GitHub Release v0.1.4](https://github.com/Sutera-Diffusus/WeChat-daily/releases/tag/v0.1.4). The installer and portable package are Release assets because they are larger than the normal single-file repository limit.
+Windows release packages for LiteChat 0.1.4 are available from [GitHub Release v0.1.4](https://github.com/Sutera-Diffusus/WeChat-daily/releases/tag/v0.1.4). The installer and portable package are Release assets because they are larger than the normal single-file repository limit.
 
-- [Download the Windows installer](https://github.com/Sutera-Diffusus/WeChat-daily/releases/download/v0.1.4/weiyu-0.1.4-windows-installer.exe): run the setup wizard, then launch Weiyu from the Start menu or desktop shortcut;
+- [Download the Windows installer](https://github.com/Sutera-Diffusus/WeChat-daily/releases/download/v0.1.4/weiyu-0.1.4-windows-installer.exe): run the setup wizard, then launch LiteChat from the Start menu or desktop shortcut;
 - [Download the Windows portable package](https://github.com/Sutera-Diffusus/WeChat-daily/releases/download/v0.1.4/weiyu-0.1.4-windows-portable.zip): extract the full folder and run `wei-daily-desktop.exe` inside it;
 - [Open the Release page](https://github.com/Sutera-Diffusus/WeChat-daily/releases/tag/v0.1.4): view release notes, file sizes, and other checks.
 
@@ -140,7 +136,7 @@ Verify downloads with these SHA256 values:
 
 ## Detailed features
 
-Weiyu is not only a chat history viewer. It is a local workflow for collection, archiving, filtering, explanation, and review. Messages stay in a dated context with a source and evidence path.
+LiteChat is not only a chat history viewer. It is a local workflow for collection, archiving, filtering, explanation, and review. Messages stay in a dated context with a source and evidence path.
 
 ### 1. Message collection
 
@@ -221,11 +217,11 @@ The main development environment uses WeChat `4.1.12.26`. Adapter behavior shoul
 
 ## Quick start
 
-Weiyu provides two Windows forms. Regular users can choose either one.
+LiteChat provides two Windows forms. Regular users can choose either one.
 
 ### A. Windows installer (recommended)
 
-Download and run `weiyu-0.1.4-windows-installer.exe`, complete the setup wizard, and launch Weiyu from the Start menu or desktop shortcut. The installer includes the desktop app and backend sidecar, so the backend does not need to be found or launched separately.
+Download and run `weiyu-0.1.4-windows-installer.exe`, complete the setup wizard, and launch LiteChat from the Start menu or desktop shortcut. The installer includes the desktop app and backend sidecar, so the backend does not need to be found or launched separately.
 
 ### B. Windows portable package
 
@@ -248,7 +244,7 @@ Do not launch `wei-daily-backend.exe` directly and do not copy only `wei-daily-d
 
 The desktop app uses `127.0.0.1:8765` for local communication between the desktop program and its backend. This is an internally managed loopback service. Regular users do not need to open PowerShell, run Python commands, open a browser, or start a port manually. After the desktop exe is launched, it waits for the service and opens the workspace automatically.
 
-If the port is occupied, another Weiyu instance or an old local service is usually still running. Close the other Weiyu window and restart. Do not start a second backend to fix it.
+If the port is occupied, another LiteChat instance or an old local service is usually still running. Close the other LiteChat window and restart. Do not start a second backend to fix it.
 
 ## Beginner tutorial
 
@@ -305,13 +301,13 @@ AI is a second pass over local rule results. It is not an auto-reply bot and it 
 4. Sync a date range first, then click **Run AI analysis** in **Daily thread** or **Workbench / Analysis**.
 5. Read the summary, key findings, and action candidates. Use the evidence ID on each result to check the original message.
 
-Without an API key, Weiyu continues to build daily editions with local rules. A disabled AI button is expected. Keep API keys in the application settings only; never put them in the README, screenshots, or Git repository.
+Without an API key, LiteChat continues to build daily editions with local rules. A disabled AI button is expected. Keep API keys in the application settings only; never put them in the README, screenshots, or Git repository.
 
 Privacy boundary: the second AI pass receives redacted candidate text and evidence IDs, not the full local database. Results must link back to local evidence. Check the data policy of the provider before sending sensitive content.
 
 ### Step 7: Configure speech recognition (optional)
 
-Speech recognition is separate from AI analysis. Weiyu first uses a local transcription already attached to a WeChat message. If no local transcription exists, it can use configured Doubao ASR for cloud recognition.
+Speech recognition is separate from AI analysis. LiteChat first uses a local transcription already attached to a WeChat message. If no local transcription exists, it can use configured Doubao ASR for cloud recognition.
 
 1. Open the settings drawer and find **Speech recognition / Doubao ASR**.
 2. Enable **Allow automatic transcription** and enter the `APP ID` and `Access Token` from the provider console. Enter `Secret Key` if the provider account requires it.
@@ -323,14 +319,14 @@ If a message already has native WeChat transcription, it is handled locally firs
 
 ### Step 8: Exit
 
-Close the Weiyu desktop window normally. The desktop app stops only the backend process that it started and does not force-close other local services. Portable package data follows the Windows application-data layout; it is not required to sit beside the exe files.
+Close the LiteChat desktop window normally. The desktop app stops only the backend process that it started and does not force-close other local services. Portable package data follows the Windows application-data layout; it is not required to sit beside the exe files.
 
 ### FAQ
 
 | Symptom | What to do |
 | --- | --- |
-| The app keeps waiting after launch | Confirm that WeChat is signed in and its main window is open. Close other Weiyu instances and restart. |
-| Port already in use | Close the old Weiyu desktop app or another local service. Do not start a second backend. |
+| The app keeps waiting after launch | Confirm that WeChat is signed in and its main window is open. Close other LiteChat instances and restart. |
+| Port already in use | Close the old LiteChat desktop app or another local service. Do not start a second backend. |
 | Portable package cannot find the backend | Extract the full zip again and keep `wei-daily-desktop.exe` and `wei-daily-backend.exe` in the same folder. |
 | Blank page or missing WebView2 | Install Microsoft Edge WebView2 Runtime. The installer can be run again; the portable package needs WebView2 installed in Windows. |
 | Sync finishes with no messages | Check the WeChat login state, date range, and chat readability, then sync the range again. |
@@ -341,12 +337,12 @@ Close the Weiyu desktop window normally. The desktop app stops only the backend 
 | Transcription exists but AI does not use it | Run **AI analysis** again after transcription. Untranscribed audio is not treated as text evidence. |
 | Need to verify a file | Run `Get-FileHash wei-daily-desktop.exe -Algorithm SHA256` in the portable folder and compare it with `SHA256SUMS.txt`. |
 
-## Weiyu workspace
+## LiteChat workspace
 
 ### Workflow
 
 1. Start WeChat and confirm the login state.
-2. Double-click the Weiyu shortcut created by the installer, or run `wei-daily-desktop.exe` from the portable folder.
+2. Double-click the LiteChat shortcut created by the installer, or run `wei-daily-desktop.exe` from the portable folder.
 3. Wait for the desktop app to start the local backend and open the workspace.
 4. Choose a date range and run **Sync current range**.
 5. Check sync status before reading key leads and action candidates.
