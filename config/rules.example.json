@@ -1,0 +1,16 @@
+{
+  "timezone": "Asia/Shanghai",
+  "cooldown_seconds": 30,
+  "rules": [
+    {
+      "name": "问候",
+      "keywords": ["你好", "在吗"],
+      "reply": "你好，我已经收到消息了。"
+    },
+    {
+      "name": "工作时间 AI 预览",
+      "time_ranges": ["09:00-18:00"],
+      "reply_text": ""
+    }
+  ]
+}

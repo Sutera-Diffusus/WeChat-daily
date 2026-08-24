@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "wechatBridge": {
+      "title": "WeChat Bridge",
+      "description": "本地微信桥接服务的状态、消息和安全控制接口。",
+      "cwd": ".",
+      "command": "python",
+      "args": ["./mcp_server.py"]
+    }
+  }
+}

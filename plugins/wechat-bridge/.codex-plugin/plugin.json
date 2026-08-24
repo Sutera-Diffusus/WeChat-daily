@@ -1,0 +1,24 @@
+{
+  "name": "wechat-bridge",
+  "version": "0.1.4",
+  "description": "通过本地桥接服务读取微信状态、消息和回复预览。",
+  "author": {
+    "name": "Sutera-Diffusus"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "WeChat Bridge",
+    "shortDescription": "查看本地微信桥接状态与安全回复预览。",
+    "longDescription": "WeChat Bridge 通过本机 HTTP 控制台为 Codex 提供状态、消息、规则、AI 预览和受控发送接口。默认只允许文件传输助手测试。",
+    "developerName": "Sutera-Diffusus",
+    "category": "Productivity",
+    "capabilities": ["local-status", "message-audit", "reply-preview", "safe-send"],
+    "brandColor": "#59D5D0",
+    "defaultPrompt": [
+      "查看微信桥接服务当前状态",
+      "读取文件传输助手最近消息",
+      "预览一条安全自动回复"
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}

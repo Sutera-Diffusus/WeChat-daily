@@ -1,0 +1,18 @@
+[package]
+name = "wei-daily-desktop"
+version = "0.1.4"
+description = "微日报 Tauri 2 desktop shell"
+authors = ["Wei Daily"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-shell = "2"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <title>微日报</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell" aria-live="polite">
+      <section class="card">
+        <img class="logo" src="./assets/wei-daily-logo.svg" alt="微日报" />
+        <p class="eyebrow">LOCAL DESKTOP EDITION</p>
+        <h1>微日报</h1>
+        <p class="subtitle">本地情报编辑部</p>
+
+        <div class="status-row">
+          <span class="status-dot" id="status-dot" aria-hidden="true"></span>
+          <span id="status-title">正在检查本机服务…</span>
+        </div>
+        <p class="message" id="status-message">正在检查 127.0.0.1:8765 的 /api/status。</p>
+        <p class="detail" id="status-detail"></p>
+
+        <div class="progress" id="progress" role="progressbar" aria-label="正在连接本地服务">
+          <span></span>
+        </div>
+        <div class="actions">
+          <button class="primary" id="retry" type="button">重试</button>
+          <button class="quiet" id="open-browser" type="button" hidden>在浏览器打开</button>
+        </div>
+        <p class="boundary">本桌面只负责本机服务生命周期与只读阅读，不调用发送接口。</p>
+      </section>
+    </main>
+    <script src="./app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "local-wechat-bridge"
+version = "0.1.4"
+description = "A local-first WeChat intake, archive, intelligence, and read-only daily briefing service."
+readme = "README.md"
+requires-python = ">=3.9,<3.13"
+dependencies = [
+    "wxauto4==41.1.2",
+    "wechatauto-replica==1.1.6.1",
+    "sqlcipher3==0.6.2",
+    "tzdata==2026.3",
+    "openai>=1.0.0,<2.0.0",
+    "cryptography>=42.0.0",
+    "silk-python>=0.2.8",
+]
+
+[project.optional-dependencies]
+desktop = ["pyinstaller>=6.0,<7"]
+
+[project.scripts]
+wechat-bridge = "wechat_bridge.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+wechat_bridge = ["web/*.html", "web/*.css", "web/*.js", "web/assets/editorial/*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

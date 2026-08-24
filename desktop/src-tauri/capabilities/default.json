@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "微日报主窗口的最小桌面权限",
+  "windows": ["main"],
+  "permissions": ["core:default", "dialog:default"]
+}

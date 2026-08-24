@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>微日报</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+    <link rel="stylesheet" href="/assets/polish.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="工作台导航">
+        <div class="brand">
+          <img class="brand-mark" src="/assets/editorial/wei-daily-logo.svg" alt="" aria-hidden="true" />
+          <div class="brand-copy"><strong>微日报</strong><span>本地情报编辑部</span></div>
+        </div>
+        <button class="sidebar-collapse" id="sidebar-collapse" type="button" title="隐藏侧栏" aria-label="隐藏侧栏" aria-expanded="true"><span aria-hidden="true">‹</span></button>
+        <nav class="nav-list" id="main-nav">
+          <a class="nav-item active" data-view="overview" href="#overview"><span class="nav-icon">⌂</span><span>总览</span><b id="nav-overview-count">—</b></a>
+          <a class="nav-item" data-view="feed" href="#feed"><span class="nav-icon">☷</span><span>信息流</span><b id="nav-feed-count">—</b></a>
+          <a class="nav-item" data-view="chats" href="#chats"><span class="nav-icon">▣</span><span>会话</span><b id="nav-chat-count">—</b></a>
+          <a class="nav-item" data-view="workbench" href="#workbench"><span class="nav-icon">▥</span><span>工作台</span><b id="nav-workbench-count">—</b></a>
+        </nav>
+        <div class="sidebar-status"><div class="readonly-state"><span class="status-dot"></span><span>只读模式</span></div><div class="sidebar-meta"><span>监听</span><strong id="sidebar-live-scope">读取中</strong></div><div class="sidebar-meta"><span>历史</span><strong id="sidebar-history-scope">读取中</strong></div></div>
+      </aside>
+      <button class="sidebar-reveal" id="sidebar-reveal" type="button" title="展开侧栏" aria-label="展开侧栏" aria-expanded="false" hidden><span aria-hidden="true">›</span><b>微日报</b></button>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div class="topbar-actions update-cluster">
+            <div class="update-readout">
+              <span class="status-pill" id="service-state"><span class="status-dot"></span><span>连接中</span></span>
+              <span class="update-time"><b>消息</b><time class="sync-time" id="sync-time">尚未同步</time></span>
+              <span class="update-time"><b>AI</b><time id="analysis-refresh-time">等待分析</time></span>
+            </div>
+            <div class="operation-actions" aria-label="日报操作">
+              <button class="top-action-button" id="refresh-now" type="button" title="立即更新消息" aria-label="立即更新消息"><span aria-hidden="true">↻</span><b>更新</b></button>
+              <button class="top-action-button top-action-ai" id="ai-analysis-home-button" type="button" title="运行 AI 分析" aria-label="运行 AI 分析" disabled><span aria-hidden="true">✦</span><b>AI 分析</b></button>
+              <button class="top-action-button" id="report-export-button" type="button" title="导出或邮件投递日报" aria-label="导出日报"><span aria-hidden="true">⇩</span><b>导出</b></button>
+              <button class="icon-button" id="refresh-toggle-top" type="button" title="暂停刷新" aria-label="暂停刷新">Ⅱ</button>
+              <button class="icon-button icon-button-green" id="quick-settings" type="button" title="设置" aria-label="设置">⚙</button>
+            </div>
+          </div>
+        </header>
+        <div class="edition-transition" id="edition-transition" hidden><span>正在翻版</span></div>
+
+          <div class="content-wrap">
+            <div class="new-messages-banner" id="new-messages-banner" hidden><span><strong id="new-messages-count">0</strong> 条新消息</span><button class="link-button" id="show-new-messages" type="button">查看</button></div>
+            <div class="notice" id="notice" role="status" hidden></div>
+
+            <section class="ai-task-status" id="ai-task-status" role="status" aria-live="polite" hidden>
+              <div class="ai-task-signal" aria-hidden="true"><span></span><i>AI</i></div>
+              <div class="ai-task-copy"><span class="ai-task-kicker">INTELLIGENCE DESK</span><strong id="ai-task-label">AI 正在分析</strong><small id="ai-task-detail">准备消息与语音转写</small></div>
+              <div class="ai-task-progress"><div class="ai-task-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="ai-task-bar"></i></div><b id="ai-task-percent">0%</b></div>
+            </section>
+
+          <section class="range-toolbar" aria-label="当前数据范围">
+            <div class="range-main"><strong id="range-readable">今天</strong><span class="range-mode" id="range-mode">全量普查</span></div>
+            <div class="range-controls"><div class="range-presets" role="group" aria-label="日期范围"><button class="range-button active" data-period="day" type="button">今日</button><button class="range-button" data-period="yesterday" type="button">昨日</button><button class="range-button" data-period="week" type="button">近 7 天</button></div><label class="date-control"><span>从</span><input type="date" id="range-start" /></label><label class="date-control"><span>到</span><input type="date" id="range-end" /></label><button class="button button-primary" id="sync-button" type="button"><span>↻</span>同步</button></div>
+          </section>
+
+          <section class="operation-progress" id="operation-progress" aria-live="polite" hidden>
+            <div class="operation-progress-copy"><strong id="operation-progress-label">正在处理</strong><span id="operation-progress-detail">准备数据</span></div>
+            <div class="operation-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="operation-progress-bar"></i></div>
+            <b id="operation-progress-value">0%</b>
+          </section>
+
+          <section class="metric-strip intelligence-dock" aria-label="当前窗口数据指标"><article class="metric-card"><span>消息量</span><strong id="metric-messages">—</strong></article><article class="metric-card"><span>会话数</span><strong id="metric-chats">—</strong></article><article class="metric-card metric-amber"><span>重点候选</span><strong id="metric-high">—</strong></article><article class="metric-card metric-green"><span>待处理</span><strong id="metric-actions">—</strong></article><article class="metric-card metric-voice"><span>语音转写</span><strong id="metric-voice">—</strong></article></section>
+
+          <section class="view-panel active newspaper-page" id="overview" data-view-panel="overview">
+            <header class="newspaper-masthead">
+              <div class="newspaper-folio"><span>LOCAL WECHAT INTELLIGENCE</span><b id="newspaper-edition">DAILY EDITION</b><span>本地只读</span></div>
+              <div class="masthead-collision">
+                <div class="masthead-volume" aria-hidden="true"><span>VOL.</span><b id="masthead-volume">LXIV</b><small>LOCAL EDITION</small></div>
+                <h2><span>微信</span><strong>情报日报</strong></h2>
+                <div class="masthead-deck"><b>WECHAT<br />DAILY</b><span>碎片归纳 · 事实核验<br />上下文优先</span></div>
+              </div>
+              <div class="newspaper-dateline"><span id="newspaper-date">今日</span><i id="seasonal-verse">everywordmatter</i><span>NO. <b id="newspaper-issue">—</b></span></div>
+            </header>
+            <div class="overview-head"><div><span class="eyebrow">FRONT PAGE / 今日现场</span><h3 id="daily-heading">今天发生了什么</h3></div><div class="overview-briefline"><span>全量普查</span><b id="overview-layout-label">简讯版</b></div></div>
+            <section class="lead-story" id="lead-story" hidden><div class="lead-label"><span>FRONT PAGE</span><strong>头版头条</strong></div><div id="overview-lead"></div></section>
+             <div class="lane-grid">
+               <section class="lane-panel lane-personal"><div class="lane-heading"><div><span class="lane-kicker">PERSONAL</span><h2>与我相关</h2></div><span class="lane-count" id="for-me-count">0</span></div><div class="event-list" id="overview-for-me"><div class="loading-state">正在整理…</div></div></section>
+               <section class="lane-panel lane-trending"><div class="lane-heading"><div><span class="lane-kicker" id="trending-kicker">TODAY'S STORIES</span><h2 id="trending-heading">今日话题</h2></div><span class="lane-count" id="trending-count">0</span></div><div class="event-list" id="overview-trending"><div class="loading-state">正在整理…</div></div></section>
+             </div>
+              <section class="unformed-section" id="unformed-section" hidden><div class="section-heading compact-section-heading"><div><span class="eyebrow">SMALL MATTERS</span><h2>一些小事</h2></div><span class="view-meta" id="unformed-count">0 件</span></div><p class="unformed-deck">私聊中的日常往来，以及群聊里已经形成语义、但不足以写成正式话题的小事。</p><div class="unformed-list" id="overview-unformed"><div class="empty-state">今天没有需要补充的小事。</div></div><button class="more-button unformed-more" id="unformed-more" type="button" hidden>继续加载</button></section>
+             <section class="conversation-census"><div class="census-heading"><div><span class="census-ornament">✦</span><span class="eyebrow">COMPLETE CONVERSATION INDEX</span><h2>全会话普查</h2></div><p>重点之外，每个当天有记录的会话都在这里留档。</p></div><div class="census-grid" id="overview-census"><div class="loading-state">正在清点全部会话…</div></div></section>
+            <section class="pending-section"><div class="section-heading compact-section-heading"><div><span class="eyebrow eyebrow-amber">REVIEW</span><h2>待核实</h2></div><span class="view-meta" id="pending-count">0 条</span></div><div class="event-list event-list-pending" id="overview-pending"><div class="empty-state">暂无待核实事件。</div></div></section>
+          </section>
+
+          <section class="view-panel" id="feed" data-view-panel="feed" hidden>
+            <div class="section-heading"><div><span class="eyebrow">MESSAGE FLOW</span><h2>信息流</h2></div><span class="view-meta" id="feed-meta">—</span></div>
+            <div class="filter-toolbar panel"><label class="search-box"><span>⌕</span><input id="feed-search" type="search" placeholder="搜索消息、联系人或会话" aria-label="搜索信息流" /></label><select id="feed-chat-filter" aria-label="按会话筛选"><option value="all">全部会话</option></select><div class="filter-group" role="group" aria-label="信息流筛选"><button class="filter-button active" data-feed-filter="all" type="button">全部</button><button class="filter-button" data-feed-filter="inbound" type="button">收到</button><button class="filter-button" data-feed-filter="high" type="button">重点</button><button class="filter-button" data-feed-filter="media" type="button">媒体</button></div></div>
+            <div class="feed-layout"><section class="panel feed-panel"><div class="feed-headline"><span>最新在上</span><span class="muted" id="feed-direction-note">只读</span></div><div class="feed-list" id="feed-list"><div class="loading-state">正在读取…</div></div><button class="more-button" id="feed-more" type="button" hidden>加载更多</button></section><aside class="panel feed-side-panel"><div class="side-title"><span class="eyebrow">WINDOW</span><strong>窗口概览</strong></div><div class="side-stat-list" id="feed-side-stats"></div></aside></div>
+          </section>
+
+          <section class="view-panel" id="chats" data-view-panel="chats" hidden>
+            <div class="section-heading"><div><span class="eyebrow">CONVERSATIONS</span><h2>会话</h2></div><span class="view-meta" id="chat-meta">—</span></div>
+            <div class="chat-workspace panel"><aside class="chat-list-pane"><div class="chat-list-top"><strong>最近会话</strong><span id="chat-list-count">—</span></div><label class="search-box chat-search"><span>⌕</span><input id="chat-search" type="search" placeholder="搜索会话" aria-label="搜索会话" /></label><div class="chat-list" id="chat-list"><div class="loading-state">正在读取…</div></div></aside><section class="chat-detail-pane" aria-label="会话详情"><div class="chat-detail-head" id="chat-detail-head"><div class="empty-detail"><span class="empty-icon">□</span><strong>选择一个会话</strong></div></div><div class="chat-message-list" id="chat-message-list"><div class="empty-state">选择会话后显示消息。</div></div></section><aside class="chat-context-pane" id="chat-context-pane"><div class="empty-detail"><span class="empty-icon">i</span><strong>会话信息</strong></div></aside></div>
+          </section>
+
+          <section class="view-panel retired-view" id="contacts" data-view-panel="contacts" hidden>
+            <div class="section-heading"><div><span class="eyebrow">CONTACTS</span><h2>通讯录</h2></div><span class="view-meta" id="contact-meta">—</span></div>
+            <div class="contact-toolbar panel"><label class="search-box"><span>⌕</span><input id="contact-search" type="search" placeholder="搜索联系人或群聊" aria-label="搜索通讯录" /></label><div class="filter-group" role="group" aria-label="通讯录筛选"><button class="filter-button active" data-contact-filter="all" type="button">全部</button><button class="filter-button" data-contact-filter="person" type="button">联系人</button><button class="filter-button" data-contact-filter="group" type="button">群聊</button></div></div>
+            <div class="contact-grid" id="contact-grid"><div class="loading-state">正在读取…</div></div>
+          </section>
+
+          <section class="view-panel" id="tasks" data-view-panel="workbench" hidden>
+            <div class="section-heading"><div><span class="eyebrow eyebrow-amber">ACTION DESK</span><h2>工作台</h2></div><span class="view-meta" id="task-meta">—</span></div>
+            <div class="task-toolbar panel"><div class="task-summary"><strong id="task-summary-count">—</strong><span>条</span></div><div class="filter-group" role="group" aria-label="待处理筛选"><button class="filter-button active" data-task-filter="all" type="button">全部</button><button class="filter-button" data-task-filter="待核对" type="button">待核对</button><button class="filter-button" data-task-filter="high" type="button">重点</button></div></div>
+            <div class="task-list panel" id="task-list"><div class="loading-state">正在读取…</div></div>
+          </section>
+
+          <section class="view-panel workbench-analysis" id="analysis" data-view-panel="workbench" hidden>
+            <div class="section-heading"><div><span class="eyebrow">ANALYSIS</span><h2>分析</h2></div><span class="view-meta" id="analysis-meta">本地规则</span></div>
+            <div class="analysis-top-grid"><section class="panel analysis-situation-panel"><div class="side-title"><span class="eyebrow">SITUATION</span><strong>当前判断</strong></div><div class="analysis-situation" id="analysis-situation"><strong>正在形成…</strong></div></section><section class="panel analysis-metrics" id="analysis-summary"></section></div>
+            <div class="analysis-grid"><section class="panel analysis-events-panel"><div class="panel-heading"><div><span class="eyebrow eyebrow-amber">EVENTS</span><h3>事件主线</h3></div></div><div class="event-list" id="analysis-event-list"><div class="empty-state">暂无事件。</div></div></section><section class="panel analysis-topics-panel"><div class="panel-heading"><div><span class="eyebrow eyebrow-purple">TOPICS</span><h3>主题脉络</h3></div></div><div class="topic-brief-list" id="topic-brief-list"><div class="empty-state">暂无主题。</div></div></section></div>
+            <div class="analysis-visual-grid"><section class="panel chart-panel"><div class="panel-heading"><div><span class="eyebrow">ACTIVITY</span><h3>活跃时段</h3></div></div><div class="hour-chart" id="hour-chart"></div><div class="muted chart-note" id="hour-note">—</div></section><section class="panel chart-panel"><div class="panel-heading"><div><span class="eyebrow">CHATS</span><h3>会话分布</h3></div></div><div class="top-chat-list" id="top-chat-list"></div></section></div>
+            <section class="panel ai-panel"><div class="panel-heading"><div><span class="eyebrow">AI ASSIST</span><h3>AI 辅助分析</h3></div><span class="readonly-tag">手动</span></div><div class="ai-status-line"><span class="status-dot status-dot-muted"></span><span id="ai-status-note">正在检查配置…</span></div><button class="button button-primary ai-button" id="ai-analysis-button" type="button" disabled>运行 AI 分析</button><div class="ai-analysis-result" id="ai-analysis-result" hidden></div></section>
+          </section>
+
+        </div>
+      </main>
+    </div>
+
+    <div class="settings-backdrop" id="settings-backdrop" hidden></div>
+    <aside class="settings-drawer" id="settings-drawer" aria-label="设置" aria-hidden="true" hidden>
+      <div class="settings-head"><div><span class="eyebrow eyebrow-green">SETTINGS</span><h2>设置</h2></div><button class="icon-button" id="settings-close" type="button" aria-label="关闭设置">×</button></div>
+      <form id="settings-form">
+        <section class="settings-section"><div class="settings-section-title"><strong>阅读</strong><span>界面</span></div><div class="settings-field-grid"><label class="settings-field"><span>字号</span><select id="font-size-setting"><option value="small">紧凑</option><option value="normal">标准</option><option value="large">舒适</option></select></label><label class="settings-field"><span>密度</span><select id="density-setting"><option value="compact">聚焦</option><option value="comfortable">舒展</option></select></label></div><label class="settings-field settings-field-wide"><span>日报配色</span><select id="report-theme-setting"><option value="auto">按内容自动选择</option><option value="classic">经典墨红</option><option value="cobalt">钴蓝要闻</option><option value="forest">深绿观察</option></select></label></section>
+        <section class="settings-section"><div class="settings-section-title"><strong>自动更新</strong><span id="settings-refresh-note">读取中</span></div><label class="settings-switch"><input id="auto-refresh-setting" type="checkbox" /><span class="switch-track"></span><span>自动拉取新消息</span></label><label class="settings-field settings-field-wide"><span>更新间隔</span><select id="refresh-interval-setting"><option value="5000">5 秒</option><option value="8000">8 秒</option><option value="15000">15 秒</option><option value="30000">30 秒</option><option value="60000">60 秒</option><option value="120000">2 分钟</option></select></label></section>
+        <section class="settings-section"><div class="settings-section-title"><strong>分析节奏</strong><span>简报</span></div><label class="settings-switch"><input id="analysis-auto-setting" type="checkbox" /><span class="switch-track"></span><span>自动更新分析</span></label><div class="settings-field-grid"><label class="settings-field"><span>分析间隔</span><select id="analysis-interval-setting"><option value="60000">1 分钟</option><option value="300000">5 分钟</option><option value="600000">10 分钟</option><option value="1800000">30 分钟</option></select></label><label class="settings-field"><span>新增消息阈值</span><input id="analysis-threshold-setting" type="number" min="1" max="1000" /></label></div></section>
+        <section class="settings-section"><div class="settings-section-title"><strong>媒体</strong><span>本机</span></div><label class="settings-field settings-field-wide"><span>缓存位置</span><input id="media-cache-setting" type="text" placeholder="D:\WeChatWorkbench\media_cache" /></label><details class="settings-advanced"><summary>图片解密 key</summary><label class="settings-field settings-field-wide"><input id="image-aes-key-setting" type="password" autocomplete="off" placeholder="可选" /></label></details><p class="settings-help" id="settings-cache-note">原始微信媒体不移动。</p></section>
+        <section class="settings-section"><div class="settings-section-title"><strong>语音识别</strong><span id="voice-setting-note">豆包 ASR</span></div><label class="settings-switch"><input id="voice-enabled-setting" type="checkbox" /><span class="switch-track"></span><span>允许自动转写</span></label><label class="settings-field settings-field-wide"><span>APP ID</span><input id="voice-app-id-setting" type="text" placeholder="留空保持不变" /></label><label class="settings-field settings-field-wide"><span>Access Token</span><input id="voice-access-token-setting" type="password" autocomplete="off" placeholder="留空保持不变" /></label><label class="settings-field settings-field-wide"><span>Secret Key</span><input id="voice-secret-key-setting" type="password" autocomplete="off" placeholder="留空保持不变" /></label><div class="settings-field-grid"><label class="settings-field"><span>单条阈值（秒）</span><input id="voice-single-threshold-setting" type="number" min="1" /></label><label class="settings-field"><span>累计阈值（秒）</span><input id="voice-cumulative-threshold-setting" type="number" min="1" /></label></div><label class="settings-switch settings-switch-danger"><input id="voice-clear-keys-setting" type="checkbox" /><span class="switch-track"></span><span>清除语音凭证</span></label></section>
+        <section class="settings-section"><div class="settings-section-title"><strong>我的画像</strong><span>只影响相关性</span></div><label class="settings-field settings-field-wide"><span>身份 / 角色</span><input id="profile-roles-setting" type="text" placeholder="逗号分隔" /></label><label class="settings-field settings-field-wide"><span>项目</span><input id="profile-projects-setting" type="text" placeholder="逗号分隔" /></label><label class="settings-field settings-field-wide"><span>组织</span><input id="profile-organizations-setting" type="text" placeholder="逗号分隔" /></label><label class="settings-field settings-field-wide"><span>重点联系人</span><input id="profile-contacts-setting" type="text" placeholder="逗号分隔" /></label><label class="settings-field settings-field-wide"><span>关注主题</span><input id="profile-topics-setting" type="text" placeholder="逗号分隔" /></label></section>
+        <section class="settings-section"><div class="settings-section-title"><strong>AI 分析</strong><span>手动调用</span></div><label class="settings-field settings-field-wide"><span>Base URL</span><input id="ai-base-url-setting" type="url" placeholder="https://.../v1" /></label><label class="settings-field settings-field-wide"><span>模型</span><input id="ai-model-setting" type="text" placeholder="模型名" /></label><label class="settings-field settings-field-wide"><span>API Key</span><input id="ai-api-key-setting" type="password" autocomplete="off" placeholder="留空保持不变" /></label><label class="settings-switch settings-switch-danger"><input id="ai-clear-key-setting" type="checkbox" /><span class="switch-track"></span><span>清除已保存 Key</span></label></section>
+        <section class="settings-section"><div class="settings-section-title"><strong>邮件投递</strong><span>仅手动发送</span></div><label class="settings-field settings-field-wide"><span>SMTP 主机</span><input id="email-host-setting" type="text" placeholder="smtp.example.com" /></label><div class="settings-field-grid"><label class="settings-field"><span>端口</span><input id="email-port-setting" type="number" min="1" max="65535" /></label><label class="settings-field"><span>加密</span><select id="email-security-setting"><option value="ssl">SSL</option><option value="starttls">STARTTLS</option><option value="none">无</option></select></label></div><label class="settings-field settings-field-wide"><span>账号</span><input id="email-username-setting" type="text" autocomplete="username" /></label><label class="settings-field settings-field-wide"><span>密码 / 授权码</span><input id="email-password-setting" type="password" autocomplete="new-password" placeholder="留空保持不变" /></label><label class="settings-field settings-field-wide"><span>发件人</span><input id="email-sender-setting" type="email" placeholder="name@example.com" /></label><label class="settings-switch settings-switch-danger"><input id="email-clear-password-setting" type="checkbox" /><span class="switch-track"></span><span>清除已保存密码</span></label></section>
+        <div class="settings-foot"><span class="settings-save-note" id="settings-save-note">保存在本机</span><div><button class="button button-quiet" id="settings-cancel" type="button">取消</button><button class="button button-primary" id="settings-save" type="submit">保存</button></div></div>
+      </form>
+    </aside>
+
+    <div class="media-lightbox" id="media-lightbox" hidden aria-hidden="true"><div class="media-lightbox-backdrop" data-close-media="true"></div><section class="media-lightbox-card" role="dialog" aria-modal="true" aria-label="媒体查看"><div class="media-lightbox-head"><div><span class="eyebrow eyebrow-green">LOCAL MEDIA</span><strong id="media-lightbox-title">媒体查看</strong></div><button class="icon-button" id="media-lightbox-close" type="button" aria-label="关闭">×</button></div><div class="media-lightbox-body"><img id="media-lightbox-image" alt="微信图片" /><div class="media-lightbox-state" id="media-lightbox-state">正在读取…</div></div><div class="media-lightbox-foot"><span id="media-lightbox-meta">只读取本地缓存</span><span class="media-lightbox-path" id="media-lightbox-path"></span></div></section></div>
+  <div class="report-export-dialog" id="report-export-dialog" hidden aria-hidden="true"><div class="report-export-backdrop" data-close-export="true"></div><section class="report-export-card" role="dialog" aria-modal="true" aria-labelledby="report-export-title"><header><div><span class="eyebrow">DELIVERY DESK</span><h2 id="report-export-title">导出与投递</h2></div><button class="icon-button" id="report-export-close" type="button" aria-label="关闭">×</button></header><p class="report-export-range" id="report-export-range">当前日报</p><div class="report-export-form"><label class="settings-field settings-field-wide"><span>收件人</span><input id="report-email-recipient" type="email" placeholder="仅邮件发送时需要" /></label><div class="report-format-row"><label><input id="report-format-html" type="checkbox" checked /> HTML</label><label><input id="report-format-pdf" type="checkbox" checked /> PDF</label></div></div><div class="report-export-actions"><button class="button button-quiet" id="report-download-html" type="button">下载 HTML</button><button class="button button-quiet" id="report-download-pdf" type="button">下载 PDF</button><button class="button button-primary" id="report-email-send" type="button">确认并发送邮件</button></div><p class="settings-help">桌面端导出时会弹出保存路径选择；浏览器模式会交给浏览器下载。邮件只在点击“确认并发送”后投递，不会自动发送。</p></section></div>
+    <script src="/assets/app.js"></script>
+  </body>
+</html>

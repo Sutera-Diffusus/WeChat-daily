@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">微日报</title>
+  <desc id="desc">由对话气泡和报纸版面构成的微日报标志</desc>
+  <path fill="#68a0f5" d="M10 9h46v44H29L17 62v-9h-7z"/>
+  <path fill="#fffdf5" stroke="#fffdf5" stroke-width="3" d="M4 3h47v44H24L12 57V47H4z"/>
+  <path fill="none" stroke="#111" stroke-width="3" d="M5.5 4.5h44v41H22.8L13.5 53v-7.5h-8z"/>
+  <path fill="#31df76" stroke="#111" stroke-width="2" d="M11 11h32v9H11z"/>
+  <path fill="#111" d="M15 14h20v3H15zM11 26h13v14H11zm18 0h14v3H29zm0 6h14v3H29zm0 6h9v3h-9z"/>
+  <path fill="#d5453f" d="M15 30h5v7h-5z"/>
+</svg>

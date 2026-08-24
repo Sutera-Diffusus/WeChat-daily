@@ -1,0 +1,46 @@
+# Python environments and generated files
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+
+# Local runtime state and private WeChat/browser data
+data/
+logs/
+output/
+tmp/
+wechatauto_logs/
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.log
+
+# Tauri / Node build output
+desktop/node_modules/
+desktop/dist/
+desktop/.sidecar-build/
+desktop/src-tauri/binaries/
+desktop/src-tauri/target/
+desktop/src-tauri/gen/
+
+# Local credentials and signing material
+.env
+.env.*
+!.env.example
+config/rules.json
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Editors and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
