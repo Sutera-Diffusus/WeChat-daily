@@ -5,21 +5,18 @@
   <h1>微语</h1>
   <p>Windows 本地优先的微信日报、历史档案与情报分析工作台。</p>
   <p>
-    <a href="README.en.md">English README</a>
+    <a href="README.en.md">LiteChat English README</a>
     ·
     <a href="https://github.com/Sutera-Diffusus/WeChat-daily/releases/tag/v0.1.4">v0.1.4 Release</a>
   </p>
 
-  <table>
-    <tr>
-      <td><strong>版本</strong><br><a href="CHANGELOG.md">v0.1.4</a></td>
-      <td><strong>下载量</strong><br><a href="https://github.com/Sutera-Diffusus/WeChat-daily/releases/tag/v0.1.4"><img src="https://img.shields.io/github/downloads/Sutera-Diffusus/WeChat-daily/v0.1.4/total?label=downloads&color=31df76" alt="v0.1.4 downloads"></a></td>
-    </tr>
-    <tr>
-      <td><strong>软件大小</strong><br>安装包 101 MiB<br>便携包 101 MiB</td>
-      <td><strong>许可证</strong><br><a href="LICENSE">MIT</a></td>
-    </tr>
-  </table>
+  <p>
+    <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.1.4-4da3ff" alt="版本 0.1.4"></a>
+    <a href="https://github.com/Sutera-Diffusus/WeChat-daily/releases/tag/v0.1.4"><img src="https://img.shields.io/github/downloads/Sutera-Diffusus/WeChat-daily/v0.1.4/total?label=downloads&amp;color=31df76" alt="v0.1.4 下载量"></a>
+    <a href="https://github.com/Sutera-Diffusus/WeChat-daily/releases/download/v0.1.4/weiyu-0.1.4-windows-installer.exe"><img src="https://img.shields.io/badge/installer-101%20MiB-31df76" alt="安装包 101 MiB"></a>
+    <a href="https://github.com/Sutera-Diffusus/WeChat-daily/releases/download/v0.1.4/weiyu-0.1.4-windows-portable.zip"><img src="https://img.shields.io/badge/portable-101%20MiB-31df76" alt="便携包 101 MiB"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-6f42c1" alt="MIT license"></a>
+  </p>
 
   <p>
     <a href="https://github.com/Sutera-Diffusus/WeChat-daily/releases/download/v0.1.4/weiyu-0.1.4-windows-installer.exe">下载安装包</a>
@@ -30,7 +27,6 @@
   </p>
 
   <p>
-    <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.1.4-4da3ff" alt="Version 0.1.4"></a>
     <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.9--3.12-3776AB?logo=python&logoColor=white" alt="Python 3.9 to 3.12"></a>
     <a href="desktop/"><img src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white" alt="Tauri 2"></a>
     <a href="https://github.com/Sutera-Diffusus/WeChat-daily/releases"><img src="https://img.shields.io/badge/platform-Windows-0078D4?logo=windows&logoColor=white" alt="Windows"></a>
