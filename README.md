@@ -1,16 +1,45 @@
-# 微语
+<div align="center">
+  <a href="https://github.com/Sutera-Diffusus/WeChat-daily">
+    <img src="src/wechat_bridge/web/assets/editorial/wei-daily-logo.svg" alt="微语 logo" width="96">
+  </a>
+  <h1>微语</h1>
+  <p>Windows 本地优先的微信日报、历史档案与情报分析工作台。</p>
+  <p>
+    <a href="README.en.md">English README</a>
+    ·
+    <a href="https://github.com/Sutera-Diffusus/WeChat-daily/releases/tag/v0.1.4">v0.1.4 Release</a>
+  </p>
 
-**微语 0.1.4**——一个面向 Windows 的本地优先微信收发、历史档案与情报分析工作台。
+  <table>
+    <tr>
+      <td><strong>版本</strong><br><a href="CHANGELOG.md">v0.1.4</a></td>
+      <td><strong>下载量</strong><br><a href="https://github.com/Sutera-Diffusus/WeChat-daily/releases/tag/v0.1.4"><img src="https://img.shields.io/github/downloads/Sutera-Diffusus/WeChat-daily/v0.1.4/total?label=downloads&color=31df76" alt="v0.1.4 downloads"></a></td>
+    </tr>
+    <tr>
+      <td><strong>软件大小</strong><br>安装包 101 MiB<br>便携包 101 MiB</td>
+      <td><strong>许可证</strong><br><a href="LICENSE">MIT</a></td>
+    </tr>
+  </table>
 
-它把本地微信消息整理成可追溯的日报素材：
+  <p>
+    <a href="https://github.com/Sutera-Diffusus/WeChat-daily/releases/download/v0.1.4/weiyu-0.1.4-windows-installer.exe">下载安装包</a>
+    ·
+    <a href="https://github.com/Sutera-Diffusus/WeChat-daily/releases/download/v0.1.4/weiyu-0.1.4-windows-portable.zip">下载便携包</a>
+    ·
+    <a href="docs/images/product-preview/overview.png">查看产品预览</a>
+  </p>
 
-`微信 → 适配器 → 统一消息 → SQLite → 日/周历史档案 → 可解释分析 → 微语工作台`
+  <p>
+    <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.1.4-4da3ff" alt="Version 0.1.4"></a>
+    <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.9--3.12-3776AB?logo=python&logoColor=white" alt="Python 3.9 to 3.12"></a>
+    <a href="desktop/"><img src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white" alt="Tauri 2"></a>
+    <a href="https://github.com/Sutera-Diffusus/WeChat-daily/releases"><img src="https://img.shields.io/badge/platform-Windows-0078D4?logo=windows&logoColor=white" alt="Windows"></a>
+  </p>
+</div>
 
-当前版本默认是**只接收、只读分析**：历史导入不会创建回复任务，发送接口保留为预览/测试能力并由运行时硬闸门保护。
-
-[![Version](https://img.shields.io/badge/version-0.1.4-4da3ff)](CHANGELOG.md)
-[![Python](https://img.shields.io/badge/Python-3.9--3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white)](desktop/)
+> <code>微信 → 适配器 → 统一消息 → SQLite → 日 / 周历史档案 → 可解释分析 → 微语工作台</code>
+>
+> 当前版本默认是<strong>只接收、只读分析</strong>：历史导入不会创建回复任务，发送接口保留为预览 / 测试能力并由运行时硬闸门保护。
 
 ---
 
