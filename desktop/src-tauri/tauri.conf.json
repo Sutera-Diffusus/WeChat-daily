@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "微日报",
+  "productName": "微语",
   "version": "0.1.4",
   "identifier": "com.weidaily.desktop",
   "build": {
@@ -12,7 +12,7 @@
       {
         "label": "main",
         "create": false,
-        "title": "微日报",
+        "title": "微语",
         "width": 1500,
         "height": 980,
         "minWidth": 980,

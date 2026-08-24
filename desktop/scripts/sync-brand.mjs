@@ -9,8 +9,8 @@ const source = path.join(projectRoot, "src", "wechat_bridge", "web", "assets", "
 const target = path.join(desktopDir, "src", "assets", "wei-daily-logo.svg");
 
 const svg = readFileSync(source, "utf8");
-if (!svg.includes("<title id=\"title\">微日报</title>")) {
-  throw new Error(`品牌源文件不是预期的微日报 logo：${source}`);
+if (!svg.includes("<title id=\"title\">微语</title>")) {
+  throw new Error(`品牌源文件不是预期的微语 logo：${source}`);
 }
 mkdirSync(path.dirname(target), { recursive: true });
 copyFileSync(source, target);

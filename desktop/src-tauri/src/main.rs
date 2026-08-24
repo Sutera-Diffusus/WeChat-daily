@@ -66,7 +66,7 @@ fn spawn_packaged_backend(app: &tauri::App) -> Result<BackendProcess, String> {
     let command = app
         .shell()
         .sidecar("wei-daily-backend")
-        .map_err(|error| format!("未找到微日报 sidecar：{error}"))?
+        .map_err(|error| format!("未找到微语 sidecar：{error}"))?
         .env("WEI_DAILY_DATA_DIR", data_dir);
     let (_events, child) = command.spawn().map_err(|error| format!("sidecar 启动失败：{error}"))?;
     Ok(BackendProcess::Sidecar(child))
@@ -135,7 +135,7 @@ async fn save_export_file(
     let dialog = app
         .dialog()
         .file()
-        .set_title("保存微日报")
+        .set_title("保存微语")
         .set_file_name(suggested_name);
     let dialog = if extension == "pdf" {
         dialog.add_filter("PDF 文件", &["pdf"])
@@ -245,7 +245,7 @@ fn main() {
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("failed to build Wei Daily desktop application");
+        .expect("failed to build Weiyu desktop application");
 
     app.run(|app_handle, event| {
         if matches!(event, RunEvent::Exit | RunEvent::ExitRequested { .. }) {

@@ -1,10 +1,10 @@
-# 微日报
+# 微语
 
-**微日报 0.1.4**——一个面向 Windows 的本地优先微信收发、历史档案与情报分析工作台。
+**微语 0.1.4**——一个面向 Windows 的本地优先微信收发、历史档案与情报分析工作台。
 
 它把本地微信消息整理成可追溯的日报素材：
 
-`微信 → 适配器 → 统一消息 → SQLite → 日/周历史档案 → 可解释分析 → 微日报工作台`
+`微信 → 适配器 → 统一消息 → SQLite → 日/周历史档案 → 可解释分析 → 微语工作台`
 
 当前版本默认是**只接收、只读分析**：历史导入不会创建回复任务，发送接口保留为预览/测试能力并由运行时硬闸门保护。
 
@@ -14,16 +14,26 @@
 
 ---
 
+## 微语自述
+
+我是微语，一个住在你电脑里的微信情报工作台。我不替你发消息，也不把聊天变成黑盒；我做的是把散落在会话里的话，按日期、来源和证据整理成可阅读的日报。你可以从总览看见今天的脉络，在信息流和会话里回到原文，在工作台里筛出待核实事项，也可以让我先把语音变成文字，再用可回链的 AI 分析辅助判断。我的原则很简单：先保留上下文，再给出结论；先让你看见证据，再决定下一步。重要内容留在本机，主动权始终在你手里。
+
+## 产品发布会海报
+
+![微语产品发布会宣传图](docs/images/marketing/weiyu-launch-poster-0.1.4.png)
+
 ## 目录
 
 - [特性](#特性)
+- [微语自述](#微语自述)
+- [产品发布会海报](#产品发布会海报)
 - [产品预览](#产品预览)
 - [下载与发布包](#下载与发布包)
 - [功能详解](#功能详解)
 - [安装要求](#安装要求)
 - [桌面版快速开始](#桌面版快速开始)
 - [桌面版新手教程](#桌面版新手教程)
-- [微日报工作台](#微日报工作台)
+- [微语工作台](#微语工作台)
 - [桌面端](#桌面端)
 - [规则与 AI](#规则与-ai)
 - [API 与 Codex 插件](#api-与-codex-插件)
@@ -70,34 +80,34 @@
 
 ## 产品预览
 
-下面是微日报本地工作台的实际界面截图。截图中的聊天名称、联系人和部分正文已经模糊处理；图片只用于展示产品布局，不代表仓库会提交任何运行时聊天数据。
+下面是微语本地工作台的实际界面截图。截图中的聊天名称、联系人和部分正文已经模糊处理；图片只用于展示产品布局，不代表仓库会提交任何运行时聊天数据。
 
 | 页面 | 说明 |
 | --- | --- |
-| <img src="docs/images/product-preview/overview.png" alt="微日报总览与日报主线" width="560"> | **总览 / 日报主线**：选择日期范围后查看消息量、会话数、重点候选、待处理项和语音转写进度，并阅读“今天发生了什么”。[查看原图](docs/images/product-preview/overview.png) |
-| <img src="docs/images/product-preview/daily-edition.png" alt="微日报日报内容页" width="560"> | **日报内容页**：把高信号消息排成可阅读的版面，保留主题、判断、标签和证据附录。[查看原图](docs/images/product-preview/daily-edition.png) |
-| <img src="docs/images/product-preview/small-things.png" alt="微日报小事列表" width="560"> | **小事**：保留低信号但可能有后续价值的日常消息，既不把它们混进主线，也不让它们悄悄消失。[查看原图](docs/images/product-preview/small-things.png) |
-| <img src="docs/images/product-preview/conversations.png" alt="微日报会话浏览" width="560"> | **会话**：按聊天查看原始消息、图片/文件/语音类型、媒体路径和会话统计，支持回到原始证据。[查看原图](docs/images/product-preview/conversations.png) |
-| <img src="docs/images/product-preview/workbench.png" alt="微日报工作台与分析" width="560"> | **工作台 / 分析**：集中查看待处理候选、事件主线、主题脉络、当前判断和分析指标；默认只读，不会因为出现候选就自动发送消息。[查看原图](docs/images/product-preview/workbench.png) |
+| <img src="docs/images/product-preview/overview.png" alt="微语总览与日报主线" width="560"> | **总览 / 日报主线**：选择日期范围后查看消息量、会话数、重点候选、待处理项和语音转写进度，并阅读“今天发生了什么”。[查看原图](docs/images/product-preview/overview.png) |
+| <img src="docs/images/product-preview/daily-edition.png" alt="微语日报内容页" width="560"> | **日报内容页**：把高信号消息排成可阅读的版面，保留主题、判断、标签和证据附录。[查看原图](docs/images/product-preview/daily-edition.png) |
+| <img src="docs/images/product-preview/small-things.png" alt="微语小事列表" width="560"> | **小事**：保留低信号但可能有后续价值的日常消息，既不把它们混进主线，也不让它们悄悄消失。[查看原图](docs/images/product-preview/small-things.png) |
+| <img src="docs/images/product-preview/conversations.png" alt="微语会话浏览" width="560"> | **会话**：按聊天查看原始消息、图片/文件/语音类型、媒体路径和会话统计，支持回到原始证据。[查看原图](docs/images/product-preview/conversations.png) |
+| <img src="docs/images/product-preview/workbench.png" alt="微语工作台与分析" width="560"> | **工作台 / 分析**：集中查看待处理候选、事件主线、主题脉络、当前判断和分析指标；默认只读，不会因为出现候选就自动发送消息。[查看原图](docs/images/product-preview/workbench.png) |
 
 ## 下载与发布包
 
-Windows 0.1.4 发布包已经放在本仓库的 [GitHub Release v0.1.4](https://github.com/Sutera-Diffusus/WeChat-daily/releases/tag/v0.1.4) 中。由于安装包和便携包都超过 GitHub 普通仓库单文件限制，它们作为 Release 资产提供下载，下面的链接可以直接跳转：
+微语 0.1.4 的 Windows 发布包已经放在本仓库的 [GitHub Release v0.1.4](https://github.com/Sutera-Diffusus/WeChat-daily/releases/tag/v0.1.4) 中。由于安装包和便携包都超过 GitHub 普通仓库单文件限制，它们作为 Release 资产提供下载，下面的链接可以直接跳转：
 
-- [下载 Windows 安装包](https://github.com/Sutera-Diffusus/WeChat-daily/releases/download/v0.1.4/wei-daily-0.1.4-windows-installer.exe)：运行安装向导，安装后从开始菜单或桌面快捷方式启动；
-- [下载 Windows 便携包](https://github.com/Sutera-Diffusus/WeChat-daily/releases/download/v0.1.4/wei-daily-0.1.4-windows-portable.zip)：完整解压后运行文件夹内的 `wei-daily-desktop.exe`；
+- [下载 Windows 安装包](https://github.com/Sutera-Diffusus/WeChat-daily/releases/download/v0.1.4/weiyu-0.1.4-windows-installer.exe)：运行安装向导，安装后从开始菜单或桌面快捷方式启动；
+- [下载 Windows 便携包](https://github.com/Sutera-Diffusus/WeChat-daily/releases/download/v0.1.4/weiyu-0.1.4-windows-portable.zip)：完整解压后运行文件夹内的 `wei-daily-desktop.exe`；
 - [查看 Release 页面](https://github.com/Sutera-Diffusus/WeChat-daily/releases/tag/v0.1.4)：查看版本说明、文件大小和其它校验信息。
 
 下载后可按下面的 SHA256 值核对文件完整性：
 
 | 文件 | SHA256 |
 | --- | --- |
-| `wei-daily-0.1.4-windows-installer.exe` | `35F66AA45A6B5158D717D011D1D327C42218E340376B97F34313776C4277CFF3` |
-| `wei-daily-0.1.4-windows-portable.zip` | `63700BB9F995C9D28185EF32D6FFDB539E9BAF20FF79C83EB00BFAF1CF34DC54` |
+| `weiyu-0.1.4-windows-installer.exe` | `100FFFA7E7C965B55B07771CAFE082A3A342DC782637156B1258874F2974D80E` |
+| `weiyu-0.1.4-windows-portable.zip` | `1FA52D8E19967DFEB1D4E2F090BE298713C548F4E856B4DA8912052671D9F974` |
 
 ## 功能详解
 
-微日报不是一个单纯的聊天记录查看器，而是一条“采集—归档—筛选—解释—复核”的本地工作流。它把消息放进有日期、有来源、有证据的上下文里，让用户先看到值得注意的内容，再随时回到原始消息核对。
+微语不是一个单纯的聊天记录查看器，而是一条“采集—归档—筛选—解释—复核”的本地工作流。它把消息放进有日期、有来源、有证据的上下文里，让用户先看到值得注意的内容，再随时回到原始消息核对。
 
 ### 1. 消息采集：把不同入口统一成一套消息
 
@@ -178,26 +188,26 @@ Tauri 2 桌面端复用同一套本地服务：已有服务运行时直接连接
 
 ## 桌面版快速开始
 
-微日报发布时提供两种 Windows 形态，普通用户二选一即可。
+微语发布时提供两种 Windows 形态，普通用户二选一即可。
 
 ### A. Windows 安装包（推荐）
 
-双击 `微日报_0.1.4_x64-setup.exe`，按安装向导完成安装，再从开始菜单或桌面快捷方式启动“微日报”。安装包会把桌面主程序和后端 sidecar 一起安装，用户不需要单独寻找或启动后端 exe。
+双击 `微语_0.1.4_x64-setup.exe`，按安装向导完成安装，再从开始菜单或桌面快捷方式启动“微语”。安装包会把桌面主程序和后端 sidecar 一起安装，用户不需要单独寻找或启动后端 exe。
 
 构建产物默认位于：
 
 ```text
-desktop/src-tauri/target/release/bundle/nsis/微日报_0.1.4_x64-setup.exe
+desktop/src-tauri/target/release/bundle/nsis/微语_0.1.4_x64-setup.exe
 ```
 
 ### B. Windows 便携包
 
-解压 `微日报-便携版-0.1.4-win-x64.zip`，保持整个文件夹结构不变，然后双击文件夹里的 `wei-daily-desktop.exe`。便携包不需要运行安装程序，也不需要 Python。
+解压 `微语-便携版-0.1.4-win-x64.zip`，保持整个文件夹结构不变，然后双击文件夹里的 `wei-daily-desktop.exe`。便携包不需要运行安装程序，也不需要 Python。
 
 便携包的正确结构是：
 
 ```text
-微日报-便携版-0.1.4-win-x64/
+微语-便携版-0.1.4-win-x64/
 ├─ wei-daily-desktop.exe    # 用户双击这个桌面主程序
 ├─ wei-daily-backend.exe    # 内置本地服务，必须与主程序同目录
 ├─ 使用说明.md
@@ -210,15 +220,15 @@ desktop/src-tauri/target/release/bundle/nsis/微日报_0.1.4_x64-setup.exe
 便携包构建产物默认位于：
 
 ```text
-output/portable/微日报-便携版-0.1.4-win-x64.zip
-output/portable/微日报-便携版-0.1.4-win-x64/
+output/portable/微语-便携版-0.1.4-win-x64.zip
+output/portable/微语-便携版-0.1.4-win-x64/
 ```
 
 ### 关于 `127.0.0.1:8765`
 
 桌面端内部仍使用 `127.0.0.1:8765` 作为主程序与内置后端之间的本机回环通信地址，但这是桌面程序自动管理的内部服务：普通用户不需要打开 PowerShell、不需要执行 Python 命令、不需要手动打开浏览器或“启动端口”。双击桌面 exe 后，程序会等待服务就绪，再自动进入工作台；退出时只关闭自己启动的后端。
 
-如果提示端口被占用，通常是已有的微日报实例或旧的本地服务仍在运行。先关闭其它微日报窗口，再重新启动；不要通过启动第二个后端来解决。
+如果提示端口被占用，通常是已有的微语实例或旧的本地服务仍在运行。先关闭其它微语窗口，再重新启动；不要通过启动第二个后端来解决。
 
 ## 桌面版新手教程
 
@@ -232,14 +242,14 @@ output/portable/微日报-便携版-0.1.4-win-x64/
 
 ### 第 2 步：选择一种发布方式
 
-- **安装包**：运行 `微日报_0.1.4_x64-setup.exe`，安装后使用快捷方式启动；
-- **便携包**：完整解压 `微日报-便携版-0.1.4-win-x64.zip`，只运行其中的 `wei-daily-desktop.exe`。
+- **安装包**：运行 `微语_0.1.4_x64-setup.exe`，安装后使用快捷方式启动；
+- **便携包**：完整解压 `微语-便携版-0.1.4-win-x64.zip`，只运行其中的 `wei-daily-desktop.exe`。
 
 两种方式不要混用同一份正在运行的后端。便携包中的两个 exe 必须同目录，压缩包不能只解出其中一个文件。
 
 ### 第 3 步：第一次启动
 
-双击桌面主程序后，先看到“正在等待本机服务”属于正常现象。桌面端会自动启动随包后端并检查健康状态，准备完成后自动打开微日报工作台。
+双击桌面主程序后，先看到“正在等待本机服务”属于正常现象。桌面端会自动启动随包后端并检查健康状态，准备完成后自动打开微语工作台。
 
 此时不需要：
 
@@ -281,7 +291,7 @@ AI 是对本地规则结果的二次分析，不是自动回复机器人，也�
 
 ### 第 7 步：配置并使用语音识别（可选）
 
-语音识别不是 AI 分析的替代品。微日报会优先使用微信消息中已经存在的本地转写；没有本地转写时，才可以使用配置好的豆包 ASR 进行云端识别。
+语音识别不是 AI 分析的替代品。微语会优先使用微信消息中已经存在的本地转写；没有本地转写时，才可以使用配置好的豆包 ASR 进行云端识别。
 
 1. 打开设置抽屉，找到“语音识别 / 豆包 ASR”；
 2. 打开“允许自动转写”，填写服务商控制台提供的 `APP ID` 和 `Access Token`；`Secret Key` 按你的服务商账户要求填写；
@@ -293,14 +303,14 @@ AI 是对本地规则结果的二次分析，不是自动回复机器人，也�
 
 ### 第 8 步：退出程序
 
-直接关闭微日报桌面窗口即可。桌面端只会关闭它自己启动的后端，不会强制关闭用户此前已经运行的其它本地服务。便携包中的数据库和运行数据按桌面端约定写入 Windows 应用数据目录，不会写进安装目录或要求把数据放在 exe 旁边。
+直接关闭微语桌面窗口即可。桌面端只会关闭它自己启动的后端，不会强制关闭用户此前已经运行的其它本地服务。便携包中的数据库和运行数据按桌面端约定写入 Windows 应用数据目录，不会写进安装目录或要求把数据放在 exe 旁边。
 
 ### 常见问题
 
 | 现象 | 处理方式 |
 | --- | --- |
-| 双击后一直等待服务 | 确认微信已登录且主窗口打开；关闭其它微日报实例后重新启动。 |
-| 提示端口被占用 | 关闭旧的微日报桌面程序或其它本地服务，不要再手动启动第二个后端。 |
+| 双击后一直等待服务 | 确认微信已登录且主窗口打开；关闭其它微语实例后重新启动。 |
+| 提示端口被占用 | 关闭旧的微语桌面程序或其它本地服务，不要再手动启动第二个后端。 |
 | 便携包提示找不到后端 | 重新完整解压 zip，确认 `wei-daily-desktop.exe` 与 `wei-daily-backend.exe` 在同一目录，不要只复制主程序。 |
 | 页面空白或 WebView2 缺失 | 安装 Microsoft Edge WebView2 Runtime；安装包可重新运行，便携包需要系统先具备 WebView2。 |
 | 同步完成但没有消息 | 确认微信登录状态、日期范围和聊天可读性，再重新抓取当前范围。 |
@@ -311,12 +321,12 @@ AI 是对本地规则结果的二次分析，不是自动回复机器人，也�
 | 语音已经转写但 AI 没有引用 | 转写完成后重新点击“运行 AI 分析”；AI 不会把尚未转写的语音当作文字证据。 |
 | 想确认文件是否损坏 | 在便携包目录执行 `Get-FileHash wei-daily-desktop.exe -Algorithm SHA256`，并与 `SHA256SUMS.txt` 对照。 |
 
-## 微日报工作台
+## 微语工作台
 
 ### 工作流
 
 1. 启动微信并确认登录状态；
-2. 双击安装包创建的微日报快捷方式，或双击便携包中的 `wei-daily-desktop.exe`；
+2. 双击安装包创建的微语快捷方式，或双击便携包中的 `wei-daily-desktop.exe`；
 3. 等待桌面端自动启动本地后端并打开工作台；
 4. 在工作台选择日期范围并执行“抓取当前范围”；
 5. 先查看同步状态，再阅读重点线索和行动候选；
@@ -375,7 +385,7 @@ npm run build
 NSIS 安装包默认位于：
 
 ```text
-desktop/src-tauri/target/release/bundle/nsis/微日报_0.1.4_x64-setup.exe
+desktop/src-tauri/target/release/bundle/nsis/微语_0.1.4_x64-setup.exe
 ```
 
 ### 构建 Windows 便携包
@@ -389,14 +399,14 @@ powershell -ExecutionPolicy Bypass -File .\desktop\scripts\build-portable.ps1 -L
 脚本会生成完整的便携包目录和 zip：
 
 ```text
-output/portable/微日报-便携版-0.1.4-win-x64/
+output/portable/微语-便携版-0.1.4-win-x64/
 ├─ wei-daily-desktop.exe
 ├─ wei-daily-backend.exe
 ├─ 使用说明.md
 ├─ SHA256SUMS.txt
 └─ version.txt
 
-output/portable/微日报-便携版-0.1.4-win-x64.zip
+output/portable/微语-便携版-0.1.4-win-x64.zip
 ```
 
 `-LaunchTest` 会启动便携版主程序做短时存活检查；脚本只会重建明确的 `output/portable` 目录，不会删除项目源码或运行数据。
