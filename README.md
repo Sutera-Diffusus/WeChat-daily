@@ -82,11 +82,11 @@
 
 ## 下载与发布包
 
-Windows 0.1.4 发布包已经放在本仓库的 [GitHub Release v0.1.4](https://github.com/Sutera-Diffusus/wei-daily/releases/tag/v0.1.4) 中。由于安装包和便携包都超过 GitHub 普通仓库单文件限制，它们作为 Release 资产提供下载，下面的链接可以直接跳转：
+Windows 0.1.4 发布包已经放在本仓库的 [GitHub Release v0.1.4](https://github.com/Sutera-Diffusus/WeChat-daily/releases/tag/v0.1.4) 中。由于安装包和便携包都超过 GitHub 普通仓库单文件限制，它们作为 Release 资产提供下载，下面的链接可以直接跳转：
 
-- [下载 Windows 安装包](https://github.com/Sutera-Diffusus/wei-daily/releases/download/v0.1.4/wei-daily-0.1.4-windows-installer.exe)：运行安装向导，安装后从开始菜单或桌面快捷方式启动；
-- [下载 Windows 便携包](https://github.com/Sutera-Diffusus/wei-daily/releases/download/v0.1.4/wei-daily-0.1.4-windows-portable.zip)：完整解压后运行文件夹内的 `wei-daily-desktop.exe`；
-- [查看 Release 页面](https://github.com/Sutera-Diffusus/wei-daily/releases/tag/v0.1.4)：查看版本说明、文件大小和其它校验信息。
+- [下载 Windows 安装包](https://github.com/Sutera-Diffusus/WeChat-daily/releases/download/v0.1.4/wei-daily-0.1.4-windows-installer.exe)：运行安装向导，安装后从开始菜单或桌面快捷方式启动；
+- [下载 Windows 便携包](https://github.com/Sutera-Diffusus/WeChat-daily/releases/download/v0.1.4/wei-daily-0.1.4-windows-portable.zip)：完整解压后运行文件夹内的 `wei-daily-desktop.exe`；
+- [查看 Release 页面](https://github.com/Sutera-Diffusus/WeChat-daily/releases/tag/v0.1.4)：查看版本说明、文件大小和其它校验信息。
 
 下载后可按下面的 SHA256 值核对文件完整性：
 
