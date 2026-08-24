@@ -20,8 +20,8 @@
 - [产品预览](#产品预览)
 - [功能详解](#功能详解)
 - [安装要求](#安装要求)
-- [快速开始](#快速开始)
-- [新手教程](#新手教程)
+- [桌面版快速开始](#桌面版快速开始)
+- [桌面版新手教程](#桌面版新手教程)
 - [微日报工作台](#微日报工作台)
 - [桌面端](#桌面端)
 - [规则与 AI](#规则与-ai)
@@ -144,178 +144,137 @@ Tauri 2 桌面端复用同一套本地服务：已有服务运行时直接连接
 
 ## 安装要求
 
+### 普通用户
+
 | 项目 | 要求 |
 | --- | --- |
 | 操作系统 | Windows 10 / 11 |
-| Python | 3.9–3.12 |
 | 微信 | 已登录，并保持主窗口打开 |
-| Node.js | 18+（仅开发或构建桌面端需要） |
-| Rust | stable-msvc（仅构建 Tauri 安装包需要） |
-| WebView2 | Windows 桌面端运行时需要 |
+| WebView2 | Windows 桌面端运行时需要；便携包启动前请确认已安装 |
+
+普通用户使用 Windows 安装包或便携包时，不需要安装 Python、Node.js、Rust，也不需要在 PowerShell 中启动后端。安装包会启动随包提供的本地服务；便携包则要求 `wei-daily-desktop.exe` 和 `wei-daily-backend.exe` 保持在同一文件夹。
+
+### 构建者 / 开发者
+
+只有从源码开发或重新构建发布包时，才需要 Python 3.9–3.12、Node.js 18+、Rust stable-msvc 和 Microsoft C++ Build Tools。相关命令放在[桌面端](#桌面端)和[开发与测试](#开发与测试)章节。
 
 当前开发环境以微信 `4.1.12.26` 为主。微信版本、数据库布局和 Hook 行为变化时，适配器可能需要重新验证。
 
-## 快速开始
+## 桌面版快速开始
 
-### 1. 创建 Python 环境
+微日报发布时提供两种 Windows 形态，普通用户二选一即可。
 
-```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -e .
+### A. Windows 安装包（推荐）
+
+双击 `微日报_0.1.4_x64-setup.exe`，按安装向导完成安装，再从开始菜单或桌面快捷方式启动“微日报”。安装包会把桌面主程序和后端 sidecar 一起安装，用户不需要单独寻找或启动后端 exe。
+
+构建产物默认位于：
+
+```text
+desktop/src-tauri/target/release/bundle/nsis/微日报_0.1.4_x64-setup.exe
 ```
 
-固定规则模式不需要 API Key。项目依赖包含 Windows 时区数据，Windows 上不要求额外安装系统时区数据库。
+### B. Windows 便携包
 
-### 2. 启动本地工作台
+解压 `微日报-便携版-0.1.4-win-x64.zip`，保持整个文件夹结构不变，然后双击文件夹里的 `wei-daily-desktop.exe`。便携包不需要运行安装程序，也不需要 Python。
 
-```powershell
-.\.venv\Scripts\python.exe -m wechat_bridge run `
-  --adapter wechatauto_db `
-  --chat "文件传输助手" `
-  --dashboard
+便携包的正确结构是：
+
+```text
+微日报-便携版-0.1.4-win-x64/
+├─ wei-daily-desktop.exe    # 用户双击这个桌面主程序
+├─ wei-daily-backend.exe    # 内置本地服务，必须与主程序同目录
+├─ 使用说明.md
+├─ SHA256SUMS.txt
+└─ version.txt
 ```
 
-然后打开 <http://127.0.0.1:8765>。
+不要直接双击 `wei-daily-backend.exe`，也不要只复制 `wei-daily-desktop.exe` 出来运行；主程序会自动按需拉起同目录的后端 sidecar。
 
-工作台提供：
+便携包构建产物默认位于：
 
-- 今天 / 近 7 天 / 自定义日期窗口；
-- “抓取当前范围”历史同步；
-- 消息总量、会话、重点线索和行动候选；
-- 消息档案搜索、筛选和证据回链；
-- 规则预览、同步状态和运行边界提示。
-
-### 3. 进行一次只读检查
-
-```powershell
-.\.venv\Scripts\python.exe -m wechat_bridge m0-check
-.\.venv\Scripts\python.exe -m wechat_bridge hook-check --base-url http://127.0.0.1:30001
+```text
+output/portable/微日报-便携版-0.1.4-win-x64.zip
+output/portable/微日报-便携版-0.1.4-win-x64/
 ```
 
-`m0-check` 只检查 Python、依赖和微信连接条件；`hook-check` 只检查本地 Hook HTTP 服务，不下载 DLL、不注入微信，也不替换微信目录文件。
+### 关于 `127.0.0.1:8765`
 
-## 新手教程
+桌面端内部仍使用 `127.0.0.1:8765` 作为主程序与内置后端之间的本机回环通信地址，但这是桌面程序自动管理的内部服务：普通用户不需要打开 PowerShell、不需要执行 Python 命令、不需要手动打开浏览器或“启动端口”。双击桌面 exe 后，程序会等待服务就绪，再自动进入工作台；退出时只关闭自己启动的后端。
 
-第一次使用时，建议先完成“本地接收 + 只读日报”这条最小路径，确认同步和证据回链正常后，再配置规则或 AI。下面的命令以当前项目目录 `D:\Project_Codex\Project_WeChatMoreFunction` 为例。
+如果提示端口被占用，通常是已有的微日报实例或旧的本地服务仍在运行。先关闭其它微日报窗口，再重新启动；不要通过启动第二个后端来解决。
 
-### 第 0 步：确认使用边界
+## 桌面版新手教程
 
-开始前请确认：
+下面是面向拿到安装包或便携包后的第一次使用流程。源码命令属于开发者流程，不是普通用户的安装步骤。
 
-- Windows 10 / 11 已登录微信，并保持微信主窗口打开；
-- 已安装 Python 3.9–3.12，推荐 Python 3.12；
-- 只把需要分析的本地数据交给微日报，仓库本身不包含聊天数据库、Cookie 或 API Key；
-- 第一次运行先保持默认只读模式，不要把 `--live` 或自动回复能力加入启动命令。
+### 第 1 步：准备微信
 
-### 第 1 步：安装项目
+1. 登录 Windows 版微信；
+2. 保持微信主窗口打开，不要在首次同步过程中退出微信；
+3. 确认需要查看的聊天已经在本机微信中可读。
 
-打开 PowerShell，进入项目目录并创建虚拟环境：
+### 第 2 步：选择一种发布方式
 
-```powershell
-cd D:\Project_Codex\Project_WeChatMoreFunction
-py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -e .
-.\.venv\Scripts\python.exe -m pip check
-```
+- **安装包**：运行 `微日报_0.1.4_x64-setup.exe`，安装后使用快捷方式启动；
+- **便携包**：完整解压 `微日报-便携版-0.1.4-win-x64.zip`，只运行其中的 `wei-daily-desktop.exe`。
 
-看到 `No broken requirements found.` 就表示依赖关系正常。项目移动到新磁盘后，如果出现 `No module named wechat_bridge`，重新执行一次 `pip install -e .` 即可修复 editable 安装指向旧路径的问题。
+两种方式不要混用同一份正在运行的后端。便携包中的两个 exe 必须同目录，压缩包不能只解出其中一个文件。
 
-### 第 2 步：启动本地工作台
+### 第 3 步：第一次启动
 
-在同一个 PowerShell 窗口执行：
+双击桌面主程序后，先看到“正在等待本机服务”属于正常现象。桌面端会自动启动随包后端并检查健康状态，准备完成后自动打开微日报工作台。
 
-```powershell
-.\.venv\Scripts\python.exe -m wechat_bridge run `
-  --adapter wechatauto_db `
-  --chat "文件传输助手" `
-  --dashboard
-```
+此时不需要：
 
-然后用浏览器打开 <http://127.0.0.1:8765>。`--chat` 是示例目标；如果要读取所有可读会话，可按本机适配器支持情况省略它，或在工作台里选择全部范围。
+- 手动运行 `wechat_bridge run`；
+- 手动打开 <http://127.0.0.1:8765>；
+- 打开或配置 Node.js、Python 虚拟环境；
+- 直接启动 `wei-daily-backend.exe`。
 
-如果页面打不开，先不要重复启动多个服务，按以下顺序检查：
+### 第 4 步：完成第一次同步
 
-```powershell
-.\.venv\Scripts\python.exe -m wechat_bridge m0-check
-Get-NetTCPConnection -LocalPort 8765 -ErrorAction SilentlyContinue
-```
+1. 在工作台选择“今天”；
+2. 点击“抓取当前范围”，等待同步状态变为完成；
+3. 查看消息总量、会话数和同步状态，确认数据已经进入本地工作台；
+4. 回到“日报主线”，阅读“今天发生了什么”；
+5. 再打开证据附录或“会话”，核对重点候选对应的原始消息；
+6. 当“今天”运行正常后，再尝试“近 7 天”或自定义日期范围。
 
-### 第 3 步：完成第一次同步
+第一次同步可能需要更久，因为后端要扫描可读数据库分片并建立本地索引。同步期间不要重复点击启动程序，也不要移动便携包文件夹。
 
-1. 在工作台选择“今天”，先执行一次“抓取当前范围”；
-2. 等待同步状态变为完成，再查看消息总量和会话数；
-3. 回到“日报主线”，确认是否出现主题、重点候选和证据编号；
-4. 确认当天流程正常后，再切换到“近 7 天”或自定义日期范围补齐历史。
+### 第 5 步：按顺序使用页面
 
-第一次同步可能需要更久，因为适配器要扫描可读数据库分片并建立本地索引。同步过程中不要同时启动第二个 `wechat_bridge run`，也不要手动移动 `data/` 目录。
+推荐顺序是“总览 → 日报主线 → 证据附录 → 会话 → 工作台 / 分析 → 小事”。日报里的重点候选是帮助排序的结果，不是自动决策；需要处理的事项应先回到原始消息确认上下文。
 
-### 第 4 步：按正确顺序阅读
+固定规则可以直接使用，不配置 AI 也不影响日报和历史档案。如果确实需要 AI 二次分析，请在工作台中手动确认，并检查结果是否带有可回链的本地证据 ID。AI 不会自动发送微信消息。
 
-推荐的阅读顺序是：
+### 第 6 步：退出程序
 
-1. **总览**：先看消息量、会话数、候选数和同步状态，判断数据是否完整；
-2. **日报主线**：阅读“今天发生了什么”，快速掌握高信号变化；
-3. **证据附录**：点击证据 ID，确认摘要是否准确；
-4. **会话**：查看前后文、发送者以及图片、文件、语音等消息类型；
-5. **工作台 / 分析**：整理需要跟进的候选，查看事件和主题的聚合结果；
-6. **小事**：最后浏览低信号消息，避免遗漏潜在后续。
-
-重点候选不是最终结论，分析指标也不是自动决策。真正需要处理的事项，应先回到原始消息确认上下文。
-
-### 第 5 步：添加自己的规则
-
-先复制示例文件：
-
-```powershell
-Copy-Item config\rules.example.json config\rules.json
-```
-
-然后编辑 `config\rules.json`，例如只关注某个聊天或包含某组关键词的消息。修改后重启服务并指定规则文件：
-
-```powershell
-.\.venv\Scripts\python.exe -m wechat_bridge run `
-  --rules-file config\rules.json `
-  --chat "文件传输助手" `
-  --dashboard
-```
-
-规则按文件顺序匹配，命中第一条后停止；布尔值要写成 JSON 的 `true` / `false`，不要写成字符串 `"true"` / `"false"`。建议先用少量规则验证结果，再逐步增加条件。
-
-### 第 6 步：需要时再开启 AI 分析
-
-固定规则已经可以完成本地日报，不配置 AI 也能使用。确实需要二次归纳时，在当前 PowerShell 会话中设置 API Key：
-
-```powershell
-$env:OPENAI_API_KEY = "你的 API Key"
-```
-
-接着在工作台中手动确认 AI 分析，并检查结果是否带有可回链的本地证据 ID。不要把 API Key 写进 README、规则文件、代码或 Git 提交中；如果使用 `.env`，也不要提交这个文件。AI 分析不会自动发送微信消息。
-
-### 第 7 步：停止服务
-
-回到运行服务的 PowerShell 窗口按 `Ctrl+C`。停止后，数据库和日志仍留在本机的 `data/`、`tmp/` 或 `wechatauto_logs/` 中，这些目录已经被 `.gitignore` 排除，不会随着普通 Git 提交上传。
+直接关闭微日报桌面窗口即可。桌面端只会关闭它自己启动的后端，不会强制关闭用户此前已经运行的其它本地服务。便携包中的数据库和运行数据按桌面端约定写入 Windows 应用数据目录，不会写进安装目录或要求把数据放在 exe 旁边。
 
 ### 常见问题
 
 | 现象 | 处理方式 |
 | --- | --- |
-| `No module named wechat_bridge` | 在项目根目录执行 `python -m pip install -e .`，再重试。 |
-| 浏览器提示无法连接 | 确认服务已启动，并检查 `127.0.0.1:8765` 是否被其他进程占用。 |
-| 同步完成但消息为空 | 确认微信已登录、主窗口保持打开，并运行 `m0-check`；再检查日期范围和适配器选择。 |
-| 候选太多 | 先缩小日期范围，再用聊天、发送者、消息类型或规则条件过滤。 |
-| 发送接口返回 403 | 这是当前版本的预期只读保护，不是安装失败。 |
-| AI 按钮不可用 | 检查当前会话是否设置 `OPENAI_API_KEY`，并确认只在工作台手动触发。 |
+| 双击后一直等待服务 | 确认微信已登录且主窗口打开；关闭其它微日报实例后重新启动。 |
+| 提示端口被占用 | 关闭旧的微日报桌面程序或其它本地服务，不要再手动启动第二个后端。 |
+| 便携包提示找不到后端 | 重新完整解压 zip，确认 `wei-daily-desktop.exe` 与 `wei-daily-backend.exe` 在同一目录，不要只复制主程序。 |
+| 页面空白或 WebView2 缺失 | 安装 Microsoft Edge WebView2 Runtime；安装包可重新运行，便携包需要系统先具备 WebView2。 |
+| 同步完成但没有消息 | 确认微信登录状态、日期范围和聊天可读性，再重新抓取当前范围。 |
+| 想确认文件是否损坏 | 在便携包目录执行 `Get-FileHash wei-daily-desktop.exe -Algorithm SHA256`，并与 `SHA256SUMS.txt` 对照。 |
 
 ## 微日报工作台
 
 ### 工作流
 
 1. 启动微信并确认登录状态；
-2. 启动微日报服务；
-3. 在工作台选择日期范围并执行“抓取当前范围”；
-4. 先查看同步状态，再阅读重点线索和行动候选；
-5. 通过证据 ID 回到消息档案核对原文；
-6. 需要长期保留的结论在工作台外另行整理，数据库仍只作为本地运行数据。
+2. 双击安装包创建的微日报快捷方式，或双击便携包中的 `wei-daily-desktop.exe`；
+3. 等待桌面端自动启动本地后端并打开工作台；
+4. 在工作台选择日期范围并执行“抓取当前范围”；
+5. 先查看同步状态，再阅读重点线索和行动候选；
+6. 通过证据 ID 回到消息档案核对原文；
+7. 需要长期保留的结论在工作台外另行整理，数据库仍只作为本地运行数据。
 
 ### 服务接口
 
@@ -343,7 +302,7 @@ POST /api/send-text        {"content": "...", "confirm": true}
 
 ## 桌面端
 
-桌面封装位于 [`desktop/`](desktop)，使用 Tauri 2。它沿用已有本地服务：若 `127.0.0.1:8765/api/status` 已可用，则直接复用；否则开发态启动项目虚拟环境中的 Python，生产态启动 PyInstaller sidecar。
+桌面封装位于 [`desktop/`](desktop)，使用 Tauri 2。发布版会随桌面主程序携带 PyInstaller sidecar：若 `127.0.0.1:8765/api/status` 已可用，则直接复用；否则自动启动随包后端。这个地址只用于本机回环通信，普通用户不需要手动打开。
 
 ### 开发运行
 
@@ -366,7 +325,38 @@ npm run build
 
 构建流程会生成品牌图标、构建 `wei-daily-backend` sidecar，再生成 NSIS 安装包。构建产物、sidecar 和 Tauri target 均不会提交到仓库。
 
+NSIS 安装包默认位于：
+
+```text
+desktop/src-tauri/target/release/bundle/nsis/微日报_0.1.4_x64-setup.exe
+```
+
+### 构建 Windows 便携包
+
+先完成一次 `npm run build`，再回到项目根目录执行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\desktop\scripts\build-portable.ps1 -LaunchTest
+```
+
+脚本会生成完整的便携包目录和 zip：
+
+```text
+output/portable/微日报-便携版-0.1.4-win-x64/
+├─ wei-daily-desktop.exe
+├─ wei-daily-backend.exe
+├─ 使用说明.md
+├─ SHA256SUMS.txt
+└─ version.txt
+
+output/portable/微日报-便携版-0.1.4-win-x64.zip
+```
+
+`-LaunchTest` 会启动便携版主程序做短时存活检查；脚本只会重建明确的 `output/portable` 目录，不会删除项目源码或运行数据。
+
 ## 规则与 AI
+
+本节中的 PowerShell 命令面向源码开发和重新构建发布包；普通用户使用桌面安装包或便携包时不需要执行这些命令。
 
 ### 规则配置
 
