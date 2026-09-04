@@ -18,7 +18,7 @@ from .context_reconstruction import _normalise_messages, _stable_hash
 
 
 SCHEMA_VERSION = "semantic_content_lines_v2"
-PROMPT_VERSION = "semantic_content_lines_prompt_v2"
+PROMPT_VERSION = "semantic_content_lines_prompt_v3"
 _IMPORTANCE = {"low", "medium", "high"}
 _CLAIM_TYPES = {"chat_report", "reported_experience", "opinion", "hypothesis", "question", "mixed"}
 _EXTERNAL_VERIFICATION = {"not_applicable", "recommended"}
@@ -53,6 +53,7 @@ SYSTEM_PROMPT = (
     "返回严格 JSON：{content_lines:[{title,summary,evidence_bindings,primary_message_ids,context_message_ids,"
     "importance,key_topic_candidate,importance_reasons,claim_type,external_verification,uncertainties}]}。"
     "一张卡可以有零条、一条或多条内容线；不同对象或问题必须拆开，不能让末尾一句覆盖前面的主线。"
+    "若摘要需要用‘随后转向、另外谈到、话题转到’才能连接两部分，通常说明应拆为两条内容线；仅有时间相邻不能合并。"
     "但同一连续讨论中，如果多个工具、方案或观点都在回答同一个上位问题（例如选择、取舍、排障或推进方式），应合并成一条内容线，避免按名词机械拆碎。"
     "primary_message_ids 只放直接支撑标题和摘要的消息；指代不清、仅帮助理解或不可用媒体放 context_message_ids。"
     "摘要中的每个事实性判断都必须由 primary_message_ids 直接支持；context_message_ids 不能成为摘要某项结论的唯一依据。"
@@ -62,7 +63,8 @@ SYSTEM_PROMPT = (
     "不可用媒体不得作为语义证据，不得猜测其内容。"
     "importance 只能是 low、medium、high。识别到话题不等于重点话题：普通短讨论通常为 low；"
     "只有存在持续讨论、明确决定、行动、结果或显著影响时才可把 key_topic_candidate 设为 true。"
-    "写作采用专业简报口吻：标题具体，摘要交代对象、发生了什么和仍缺什么；句子自然衔接，不按消息顺序逐条复述。"
+    "写作采用专业简报口吻：标题直接概括事项，避免以‘讨论、用户、参与者’等空泛词开头；"
+    "摘要优先写清具体进展、判断、分歧、行动和未决问题，必要时再交代是谁陈述，不能按消息顺序逐条复述。"
     "不要使用‘不是……而是……’‘不仅……还……’‘一方面……另一方面……’‘首先……其次……’等机械框架，"
     "不要连续使用‘围绕、讨论、提到、同时、此外’组织排比句。"
     "claim_type 只能是 chat_report、reported_experience、opinion、hypothesis、question、mixed。"
@@ -252,7 +254,7 @@ def enrich_review_content_lines(
         lines: List[Dict[str, Any]] | None = None
         error_code = ""
         previous_payload: Any = None
-        for attempt in range(2):
+        for attempt in range(3):
             request_packet = packet if attempt == 0 else {
                 **packet,
                 "format_repair": {
@@ -287,16 +289,25 @@ def enrich_review_content_lines(
                 previous_payload = payload
         if lines is None:
             unit["content_line_candidates"] = []
+            unit["content_line_extraction"] = {
+                "status": "failed",
+                "error_code": error_code or "content_line_validation_failed",
+                "attempt_count": 3,
+            }
             failures.append({
                 "unit_ref": str(unit.get("unit_ref") or ""),
                 "error_code": error_code or "content_line_validation_failed",
-                "attempt_count": 2,
+                "attempt_count": 3,
             })
             continue
         for line in lines:
             line["support_message_refs"] = [id_to_ref[value] for value in line["support_message_ids"]]
             line["context_message_refs"] = [id_to_ref[value] for value in line["context_message_ids"]]
         unit["content_line_candidates"] = lines
+        unit["content_line_extraction"] = {
+            "status": "complete",
+            "content_line_count": len(lines),
+        }
         completed += 1
     review = enriched.setdefault("review", {})
     review["semantic_content_line_extraction"] = {

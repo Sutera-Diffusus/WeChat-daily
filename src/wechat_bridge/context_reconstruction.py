@@ -3452,6 +3452,7 @@ def render_review_html(result: Mapping[str, Any], source_messages: Any = None) -
         review_categories = list(unit.get("review_categories") or sorted(profile.get("review_categories") or ()))
         category_overlap = list(unit.get("category_overlap") or [])
         content_lines = [line for line in (unit.get("content_line_candidates") or thread.get("content_line_candidates") or ()) if isinstance(line, Mapping)]
+        content_line_extraction = unit.get("content_line_extraction") if isinstance(unit.get("content_line_extraction"), Mapping) else {}
         content_line_items: List[str] = []
         for line in content_lines:
             importance_label = {"low": "低", "medium": "中", "high": "高"}.get(str(line.get("importance_candidate")), "待判断")
@@ -3488,7 +3489,11 @@ def render_review_html(result: Mapping[str, Any], source_messages: Any = None) -
             f'<section class="content-lines"><h3>提炼出的内容线（候选）</h3><ol>{"".join(content_line_items)}</ol>'
             '<p class="candidate-note">“识别到讨论话题”与“晋升为重点话题”分开判断；短对话可以有明确话题，但缺少持续、决策或行动证据时不会升为重点。</p></section>'
             if content_line_items
-            else '<section class="content-lines empty-content-lines"><h3>提炼出的内容线（候选）</h3><p>当前没有足够的类型化证据形成明确内容线，保留为交流过程候选。</p></section>'
+            else (
+                f'<section class="content-lines extraction-failed"><h3>内容线提炼失败</h3><p>语义结果未通过本地协议校验，已保留原交流过程供复核；错误码：{_safe_dom(content_line_extraction.get("error_code") or "unknown", 160)}。</p></section>'
+                if content_line_extraction.get("status") == "failed"
+                else '<section class="content-lines empty-content-lines"><h3>提炼出的内容线（候选）</h3><p>语义提炼已完成，当前未识别出明确内容线；交流过程仍保留供复核。</p></section>'
+            )
         )
         topic_labels = [str(item.get("label")) for item in thread.get("local_topics") or () if isinstance(item, Mapping)]
         continuing_labels = [str(item.get("label")) for item in thread.get("continuing_topics") or () if isinstance(item, Mapping)]

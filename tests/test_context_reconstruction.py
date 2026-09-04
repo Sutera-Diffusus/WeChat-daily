@@ -565,6 +565,22 @@ def test_content_line_contract_rejects_unbound_evidence_and_mechanical_editorial
         validate_content_lines({"content_lines": [mechanical]}, allowed_message_ids=["m1"])
 
 
+def test_failed_content_line_validation_is_visible_in_review() -> None:
+    rows = [_message("m1", "项目状态需要确认。", "2026-08-25T09:00:00+08:00")]
+    base = reconstruct_context(rows, reference_date="2026-08-25")
+    model = _ContentLineModel({"invalid": []})
+
+    result = enrich_review_content_lines(base, rows, model)
+    unit = result["review"]["sample_units"][0]
+    html = render_review_html(result, rows)
+
+    assert unit["content_line_extraction"]["status"] == "failed"
+    assert unit["content_line_extraction"]["attempt_count"] == 3
+    assert result["review"]["semantic_content_line_extraction"]["failed_card_count"] == 1
+    assert "内容线提炼失败" in html
+    assert "root_shape" in html
+
+
 def test_context_envelope_does_not_pull_unrelated_tool_and_application_turns() -> None:
     rows = [
         _message(

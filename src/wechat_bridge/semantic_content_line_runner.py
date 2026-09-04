@@ -17,7 +17,7 @@ from .semantic_content_lines import enrich_review_content_lines
 from .staged_deepseek_analyzer import OpenAICompatibleStageModel
 
 
-EVALUATION_VERSION = "context_reconstruction_semantic_evaluation_v4"
+EVALUATION_VERSION = "context_reconstruction_semantic_evaluation_v7"
 
 
 def build_semantic_review(
