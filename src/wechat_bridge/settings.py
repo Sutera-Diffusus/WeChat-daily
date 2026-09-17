@@ -63,6 +63,9 @@ class WorkbenchSettings:
                 "interval_ms": 600_000,
                 "message_threshold": 20,
             },
+            # The shadow semantic surface is review-only and fail-closed.  It
+            # must never be enabled merely because a provider is configured.
+            "shadow_analysis_enabled": False,
             "media": {
                 "cache_dir": str((self.base_dir / "media_cache").resolve()),
                 "image_aes_key": "",
@@ -94,6 +97,7 @@ class WorkbenchSettings:
                 "keep_source_audio": False,
             },
             "profile": {
+                "self_name": "",
                 "roles": [],
                 "projects": [],
                 "organizations": [],
@@ -123,6 +127,10 @@ class WorkbenchSettings:
         return self._normalize(value)
 
     def _normalize(self, value: Dict[str, Any]) -> Dict[str, Any]:
+        # Accept only an explicit boolean.  Values such as the string
+        # ``"true"`` are treated as false so a malformed persisted setting
+        # cannot silently open the shadow path.
+        value["shadow_analysis_enabled"] = value.get("shadow_analysis_enabled") is True
         display = value.setdefault("display", {})
         font_size = str(display.get("font_size") or "normal").strip().lower()
         display["font_size"] = font_size if font_size in _FONT_SIZES else "normal"
@@ -212,6 +220,9 @@ class WorkbenchSettings:
         voice["keep_source_audio"] = bool(voice.get("keep_source_audio", False))
 
         profile = value.setdefault("profile", {})
+        # ``self_name`` lets the operator pin who "我" is in the brief even
+        # when the adapter cannot read the logged-in account's nickname.
+        profile["self_name"] = str(profile.get("self_name") or "").strip()[:60]
         for key in ("roles", "projects", "organizations", "key_contacts", "topics", "suggestions"):
             raw_values = profile.get(key) if isinstance(profile.get(key), list) else []
             profile[key] = list(dict.fromkeys(
@@ -269,6 +280,8 @@ class WorkbenchSettings:
             raise ValueError("设置必须是 JSON 对象")
         with self._lock:
             candidate = copy.deepcopy(self._data)
+            if "shadow_analysis_enabled" in payload:
+                candidate["shadow_analysis_enabled"] = payload.get("shadow_analysis_enabled") is True
             for section in ("display", "refresh", "analysis", "media", "ai", "voice", "profile", "email"):
                 incoming = payload.get(section)
                 if isinstance(incoming, Mapping):

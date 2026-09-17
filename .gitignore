@@ -11,6 +11,11 @@ dist/
 
 # Local runtime state and private WeChat/browser data
 data/
+private_fixtures/
+gold-standard-private/
+tests/fixtures/private/
+*.private.jsonl
+*.private.ndjson
 logs/
 output/
 tmp/
@@ -20,6 +25,13 @@ wechatauto_logs/
 *.sqlite
 *.sqlite3
 *.log
+
+# Defense in depth for private gold-standard fixtures
+private_fixtures/
+gold-standard-private/
+tests/fixtures/private/
+*.private.jsonl
+*.private.ndjson
 
 # Tauri / Node build output
 desktop/node_modules/
@@ -44,3 +56,10 @@ config/rules.json
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local automation noise
+@AutomationLog.txt
+.tmp_k31_audit*/
+# Private audit artifacts
+artifact/audit/
+*.private.json

@@ -305,3 +305,102 @@ def test_ai_generator_uses_structured_output_without_raw_identifiers(monkeypatch
     assert calls["text"]["format"]["type"] == "json_schema"
     assert "internal-message-id" not in calls["input"]
     assert "不要发送" not in calls["input"]
+
+
+def test_ai_generator_packet_mode_sends_only_primary_candidates_and_claim_schema(monkeypatch):
+    calls = {}
+
+    class FakeResponses:
+        def create(self, **kwargs):
+            calls.update(kwargs)
+            return SimpleNamespace(
+                output_text=json.dumps(
+                    {
+                        "brief": "",
+                        "findings": [
+                            {
+                                "title": "方案确认请求",
+                                "category": "event",
+                                "importance": 70,
+                                "confidence": 90,
+                                "uncertainty": "尚未看到回复",
+                                "claims": [
+                                    {"text": "群成员请我明天确认方案", "evidence_refs": ["m-001"]}
+                                ],
+                            }
+                        ],
+                        "limitations": [],
+                    },
+                    ensure_ascii=False,
+                )
+            )
+
+    class FakeOpenAI:
+        def __init__(self, api_key):
+            self.responses = FakeResponses()
+
+    monkeypatch.setitem(sys.modules, "openai", SimpleNamespace(OpenAI=FakeOpenAI))
+    result = OpenAIAnalysisGenerator(api_key="test-key").analyze(
+        {"start": "2026-08-21", "end": "2026-08-21"},
+        [
+            {
+                "evidence_ref": "m-001",
+                "timestamp": "2026-08-21T01:00:00+00:00",
+                "chat_name": "项目群",
+                "sender_name": "群成员",
+                "content": "请明天确认方案",
+                "context": [{"sender_name": "邻居", "content": "六七门课和头疼"}],
+            }
+        ],
+        {"event_candidates": [{"summary": "API 价格下降", "evidence_refs": ["m-001"]}]},
+        packet_mode=True,
+    )
+
+    assert result["brief"] == ""
+    assert result["findings"][0]["claims"] == [
+        {"text": "群成员请我明天确认方案", "evidence_refs": ["m-001"]}
+    ]
+    assert result["findings"][0]["ref_ids"] == ["m-001"]
+    assert "六七门课和头疼" not in calls["input"]
+    assert "API 价格下降" not in calls["input"]
+    assert calls["text"]["format"]["schema"] == OpenAIAnalysisGenerator.packet_schema
+    assert "不要写简报" in calls["input"]
+
+
+def test_ai_generator_packet_mode_drops_claim_with_out_of_packet_reference(monkeypatch):
+    class FakeResponses:
+        def create(self, **_kwargs):
+            return SimpleNamespace(
+                output_text=json.dumps(
+                    {
+                        "brief": "",
+                        "findings": [
+                            {
+                                "title": "混入包外事实",
+                                "category": "event",
+                                "importance": 80,
+                                "confidence": 80,
+                                "uncertainty": "",
+                                "claims": [
+                                    {"text": "不存在的包外事实", "evidence_refs": ["m-999"]}
+                                ],
+                            }
+                        ],
+                        "limitations": [],
+                    },
+                    ensure_ascii=False,
+                )
+            )
+
+    class FakeOpenAI:
+        def __init__(self, api_key):
+            self.responses = FakeResponses()
+
+    monkeypatch.setitem(sys.modules, "openai", SimpleNamespace(OpenAI=FakeOpenAI))
+    result = OpenAIAnalysisGenerator(api_key="test-key").analyze(
+        {"start": "2026-08-21", "end": "2026-08-21"},
+        [{"evidence_ref": "m-001", "content": "请确认方案"}],
+        packet_mode=True,
+    )
+
+    assert result["findings"] == []

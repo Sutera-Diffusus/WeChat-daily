@@ -1,0 +1,290 @@
+{
+  "surface": "report",
+  "manifest": {
+    "version": 1,
+    "surface": "report",
+    "title": "碎片聊天语义情报分析：学术与开源方案调研",
+    "description": "面向微语项目的事件边界、主张归因、证据保真、摘要审核与端到端评测技术报告。",
+    "generatedAt": "2026-08-26T12:00:00+08:00",
+    "filters": [],
+    "cards": [],
+    "charts": [
+      {
+        "id": "evidence_coverage_chart",
+        "title": "本轮调研证据覆盖",
+        "subtitle": "按方法领域计数；同一来源可跨领域出现，数量不代表优劣。",
+        "type": "bar",
+        "dataset": "evidence_coverage",
+        "sourceId": "evidence_coverage_transform",
+        "encodings": {
+          "x": { "field": "area", "type": "nominal", "label": "方法领域" },
+          "y": { "field": "source_count", "type": "quantitative", "label": "调研条目数" },
+          "tooltip": [
+            { "field": "scope", "type": "nominal", "label": "覆盖范围" }
+          ]
+        }
+      }
+    ],
+    "tables": [
+      {
+        "id": "problem_mapping_table",
+        "title": "当前失败与对应研究任务",
+        "subtitle": "把一个宽泛的“语义分析”问题拆成可独立评测的任务。",
+        "dataset": "problem_mapping",
+        "sourceId": "problem_mapping_transform",
+        "defaultSort": { "field": "failure", "direction": "asc" },
+        "columns": [
+          { "field": "failure", "label": "当前失败", "type": "text" },
+          { "field": "research_task", "label": "真正对应的任务", "type": "text" },
+          { "field": "required_output", "label": "必须保留的输出", "type": "text" },
+          { "field": "anti_pattern", "label": "不能再依赖", "type": "text" }
+        ]
+      },
+      {
+        "id": "project_comparison_table",
+        "title": "开源项目采用分层",
+        "subtitle": "区分可借鉴的组件、研究基线与不应直接承担的职责。",
+        "dataset": "project_comparison",
+        "sourceId": "project_comparison_transform",
+        "defaultSort": { "field": "project", "direction": "asc" },
+        "columns": [
+          { "field": "project", "label": "项目", "type": "text" },
+          { "field": "best_use", "label": "最适合的用途", "type": "text" },
+          { "field": "fit", "label": "与本项目匹配度", "type": "text" },
+          { "field": "do_not_use_as", "label": "不要把它当成", "type": "text" }
+        ]
+      },
+      {
+        "id": "experiment_table",
+        "title": "离线对照实验",
+        "subtitle": "先证明边界、归因和审核能力，再讨论接入生产链路。",
+        "dataset": "experiments",
+        "sourceId": "experiment_transform",
+        "defaultSort": { "field": "variant", "direction": "asc" },
+        "columns": [
+          { "field": "variant", "label": "方案", "type": "text" },
+          { "field": "mechanism", "label": "核心机制", "type": "text" },
+          { "field": "question", "label": "要回答的问题", "type": "text" },
+          { "field": "risk", "label": "主要风险", "type": "text" }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "id": "research_sources",
+        "label": "论文、GitHub 项目与本地代码核对清单",
+        "path": "docs/research/semantic-intelligence-research-sources.md"
+      },
+      {
+        "id": "evidence_coverage_transform",
+        "label": "调研证据覆盖人工编码",
+        "path": "docs/research/semantic-intelligence-research-sources.md"
+      },
+      {
+        "id": "problem_mapping_transform",
+        "label": "失败模式与研究任务映射",
+        "path": "docs/research/semantic-intelligence-research-sources.md"
+      },
+      {
+        "id": "project_comparison_transform",
+        "label": "开源项目能力边界编码",
+        "path": "docs/research/semantic-intelligence-research-sources.md"
+      },
+      {
+        "id": "experiment_transform",
+        "label": "离线实验方案编码",
+        "path": "docs/research/semantic-intelligence-research-sources.md"
+      }
+    ],
+    "blocks": [
+      {
+        "id": "title",
+        "type": "markdown",
+        "body": "# 碎片聊天语义情报分析：学术与开源方案调研"
+      },
+      {
+        "id": "technical_summary",
+        "type": "markdown",
+        "body": "## 技术结论：这不是一个聚类问题，而是五个必须分层的问题\n\n**当前最危险的设计假设，是把“语义相似”当成“同一事件”。** GPT 重置、中转站性价比、multica 消耗和账号稳定性可以同属一个主题族，但事件对象、动作、诉求和证据状态不同，不应进入同一事件卡片。\n\n**建议采用“宽召回、窄裁决、结构化保真、受约束摘要、端到端审核”五层体系。** 主题模型只负责发现候选；事件共指必须依据动作、参与者/对象、时间、状态、诉求和来源关系判断；人物观点以主张记录保存；摘要只能读取已经确认边界的事件，并逐条链接证据。\n\n**不要立即重写生产代码。** 先建立一套脱敏金标准和离线对照实验，优先优化灾难性错误合并率、说话人归因准确率、证据覆盖率和最终 UI 链路一致性。只有端到端审核通过，局部 API 指标才有意义。"
+      },
+      {
+        "id": "evidence_coverage_note",
+        "type": "markdown",
+        "body": "## 证据覆盖的是完整管线，不只是聚类\n\n本轮来源在事件身份与关系上最密集，同时覆盖主张归因、摘要一致性、人机协同评测和应用数据模型。下图只检查调研范围是否失衡；条目可重复计入多个领域，因此不能用来比较技术成熟度或推荐强度。"
+      },
+      {
+        "id": "evidence_coverage",
+        "type": "chart",
+        "chartId": "evidence_coverage_chart"
+      },
+      {
+        "id": "key_finding_identity",
+        "type": "markdown",
+        "body": "## 主题、事件、主张必须成为三种不同对象\n\n[BERTopic](https://github.com/MaartenGr/BERTopic) 可以发现主题族和多方面主题，但主题模型优化的是语义/词汇上的可解释分组，不是现实世界事件身份。[事件驱动新闻流聚类研究](https://aclanthology.org/2021.eacl-main.198/)把稀疏表示、稠密表示、实体和时间联合起来；[跨文档事件共指研究](https://aclanthology.org/2020.nuse-1.1/)进一步把事件提及识别、成对共指和最终聚类拆开评估。\n\n对本项目，正确层级应是：`AI 服务` 是主题族；`GPT 额度重置`、`中转站成本比较`、`multica 消耗异常` 是不同事件或问题；`某人说 multica 消耗很高` 是带说话人和证据的主张。首页可以把多个事件编入同一版面栏目，但不能因此把它们折叠成一条事实叙述。"
+      },
+      {
+        "id": "problem_mapping",
+        "type": "table",
+        "tableId": "problem_mapping_table"
+      },
+      {
+        "id": "key_finding_merge_gate",
+        "type": "markdown",
+        "body": "## 合并应是受约束的身份判定，而不是关键词投票\n\n一个候选只有同时满足关键槽位兼容，才允许进入同一事件簇：\n\n- **动作/事件类型兼容**：重置、注册、计费、封禁、故障不是同一动作。\n- **核心对象兼容**：GPT、Codex、multica、中转站、GitHub、邮箱必须分别规范化，父类相同不能覆盖子对象差异。\n- **时间与状态兼容**：已经恢复、仍在等待、反复重置、历史经验应保留状态差异；矛盾可以同处一事件，但不能被摘要抹平。\n- **诉求兼容**：问价格、报告故障、寻求注册帮助、表达风险判断不是同一种用户意图。\n- **证据关系存在**：显式回复、引用、同一链接、相同错误码或同一具体动作，是比共享“GPT/账号/消耗”更强的合并证据。\n\n[EventRelBench](https://aclanthology.org/2025.findings-emnlp.482/)显示通用 LLM 对共指、时间、因果和超/子事件关系仍有明显不足，因此 LLM 可以裁决歧义候选，但不应拥有无约束的最终合并权。"
+      },
+      {
+        "id": "key_finding_provenance",
+        "type": "markdown",
+        "body": "## “谁—对什么—说了什么—依据什么”应是主数据，不是摘要附件\n\n[Who Said What](https://aclanthology.org/2024.lrec-main.1530/)把发言与说话人配对作为独立任务；[文档级主张抽取与解上下文](https://aclanthology.org/2024.acl-long.645/)则先选出可核验主张，再补齐脱离原文后必需的上下文。应用端的 [OpenCTI](https://github.com/OpenCTI-Platform/opencti) 也把来源、关系、首次/最后出现时间和置信度当作核心结构。\n\n建议每条可展示判断都落成不可丢失的 `claim record`：`speaker_id`、`claim_text`、`claim_type`、`target_entity_ids`、`event_mention_id`、`stance/polarity`、`status/modality`、`timestamp`、`message_id`、`reply_to`、`evidence_span`、`confidence`。标题和摘要只能引用这些记录，不允许反向创造新的事件身份或人物观点。"
+      },
+      {
+        "id": "key_finding_summary",
+        "type": "markdown",
+        "body": "## 摘要必须在事件边界之后，并接受逐主张审核\n\n[PRIMERA](https://aclanthology.org/2022.acl-long.360/)说明多文档聚合可以专门训练，但前提是输入簇正确。更直接的风险来自 2025 年研究：[多文档摘要在不存在相关信息时仍可能生成内容](https://aclanthology.org/2025.findings-naacl.293/)，错误常表现为过度泛化或不遵循约束。\n\n因此最终摘要应采用“先抽取、后生成、再验证”：先从单一事件簇中抽取主张和论元；生成标题与简报时要求每句话返回支持它的 `claim_id/message_id`；再用实体一致性、NLI 或 QA 做核验。[SummaC](https://aclanthology.org/2022.tacl-1.10/)适合检查句子级蕴含，[QAFactEval](https://aclanthology.org/2022.naacl-main.187/)适合把人物、对象、动作、时间和状态转成可解释问题。任何无法对齐证据的句子都应删除或标成待核实，而不是用编辑化模板补齐。"
+      },
+      {
+        "id": "project_heading",
+        "type": "markdown",
+        "body": "## 开源端：组合借鉴，不寻找一个包办全链路的仓库\n\n最可行的路线不是 fork 一个新闻聚类项目，而是用成熟项目分别验证主题召回、事件结构、跨文档共指、摘要和人工审核。下表中的“高”表示适合进入离线试验，不等于可以直接加入现有依赖。"
+      },
+      {
+        "id": "project_comparison",
+        "type": "table",
+        "tableId": "project_comparison_table"
+      },
+      {
+        "id": "target_architecture",
+        "type": "markdown",
+        "body": "## 建议的目标数据流：原文不可变，派生结果可重算\n\n1. **消息与会话层**：完整保留原文、时间、会话、发言人、回复/引用、链接和媒体转写；所有派生层只保存引用。\n2. **提及与主张层**：抽取实体、事件触发、论元、主张、说话人、情态、观点/问题/事实类型和证据片段。\n3. **候选召回层**：用关键词、稠密向量、实体重合、回复链和时间邻近生成高召回候选；BERTopic 或 HDBSCAN 只能在这一层工作。\n4. **身份裁决层**：对候选对输出 `same_event / related_event / same_topic_only / unrelated / insufficient_context`，同时给出槽位冲突和支持证据。\n5. **事件图层**：事件、主张、人物、对象、来源形成图；时间、因果、共指、子事件和反驳是不同边类型。\n6. **编辑层**：先从事件图选择卡片，再生成标题与摘要；标题不得改变事件边界，`lead` 只是版面角色。\n7. **展示层**：前端不再做语义合并，只按后端稳定 ID 排版；任何去重必须是显式、可审计的展示规则。\n8. **审核层**：保存每次模型/规则版本、输入集合、输出和人工判定，支持离线重放和回归。"
+      },
+      {
+        "id": "scope_definitions",
+        "type": "markdown",
+        "body": "## 本轮范围与关键定义\n\n- **主题族**：长期、宽泛的讨论领域，例如 AI 服务、账号与平台；允许包含多个不同事件。\n- **事件**：在可辨认时间范围内，围绕特定对象发生或被报告的一次状态变化、问题、决策或行动。\n- **主张**：某个说话人对对象或事件作出的事实陈述、观点、问题、建议或假设。\n- **事件共指**：两个提及是否指向同一个现实事件实例，不等同于是否语义相关。\n- **趋势**：同一指标、主张类型或主题族在时间上的重复/增长信号；趋势项不能替代组成它的事件和主张。\n- **证据保真**：每个用户可见判断都能回到具体消息和文本片段，并保留人物、对象、状态和不确定性。\n\n本轮没有改代码，也没有在真实消息上训练或比较模型；结论用于定义下一轮实验和架构边界。"
+      },
+      {
+        "id": "methodology",
+        "type": "markdown",
+        "body": "## 调研方法：从失败模式反推任务，再检查端到端证据\n\n本轮先只读核对当前仓库中标题规则、事件构造、首页 AI 来源门槛、`sameTopic` 和 `detail_points` 渲染路径，再将每类失败映射到学术任务。学术来源优先 ACL Anthology 和论文官方代码；GitHub 项目按能力边界、中文适配、可审计性和工程角色比较。\n\n证据强度按三层处理：同行评审论文用于支持任务分解和已知失败；官方 GitHub 用于确认实现能力；本地代码只用于证明当前链路存在相应机制。没有把论文数据集上的分数外推为微信聊天上的预期准确率，也没有用 stars 数量替代工程评估。"
+      },
+      {
+        "id": "evaluation_plan",
+        "type": "markdown",
+        "body": "## 评测重点：优先消灭灾难性错误合并\n\n建立一份脱敏金标准，单位不是“主题标题好不好看”，而是消息提及、主张和事件关系。第一批建议覆盖数百条消息、几十个事件簇，并刻意加入难负例：同一产品不同问题、同一关键词不同对象、相同事件不同状态、跨会话转述、显式回复跨长时间、人物意见冲突、只有父类词相同的无关消息。\n\n核心指标包括：\n\n- **事件边界**：成对 precision/recall/F1、B-Cubed、过度合并率、过度切分率；单独报告“把两个不同事件合成一张卡”的灾难性错误率。\n- **结构抽取**：事件触发和论元 F1；说话人—主张—对象三元组准确率；时间、情态和事实/观点/问题分类。\n- **证据保真**：可见句子的证据覆盖率、错误归因率、丢失实体率、无证据新信息率。\n- **摘要**：逐主张 entailment、QA 一致性、矛盾状态保留、覆盖而非 ROUGE 单指标。\n- **端到端**：最终首页采用的数据来源、卡片数量、稳定 ID、前端是否再次合并、详情字段是否按设计显示。\n\n[OmniEvent 的评估陷阱研究](https://aclanthology.org/2023.findings-acl.586/)与 [CheckList](https://arxiv.org/abs/2005.04118)共同支持这一点：局部准确率和少量快乐路径不能替代统一输出协议、完整管线评测和行为回归。"
+      },
+      {
+        "id": "experiment_heading",
+        "type": "markdown",
+        "body": "## 下一轮只做离线实验，不接首页\n\n四个方案使用同一份金标准、同一候选集和同一评分脚本。先比较错误类型，再比较成本和延迟；只有混合方案在关键反例上稳定优于当前基线，才讨论最小化接入。"
+      },
+      {
+        "id": "experiments",
+        "type": "table",
+        "tableId": "experiment_table"
+      },
+      {
+        "id": "limitations",
+        "type": "markdown",
+        "body": "## 限制、不确定性与稳健性要求\n\n大多数公开事件共指基准来自新闻或英文文本；微信中文短消息包含省略、口语、表情、转述、回复链和强会话上下文，存在显著域偏移。事件 schema 如果定义过细会导致大量未知类型，过粗又会复现当前泛化标题问题。LLM 输出理由并不自动等于真实依据，必须以可定位证据片段为准。\n\n进入工程试验前还需重新核对候选项目的许可证、最近维护状态、模型下载、Windows/CPU 可运行性和中文表现。任何模型升级都必须固定版本并重跑金标准；阈值应按错误成本校准，不能用一个全局相似度阈值覆盖所有会话和事件类型。"
+      },
+      {
+        "id": "recommended_next_steps",
+        "type": "markdown",
+        "body": "## 推荐下一步\n\n1. 冻结当前生产链路，不再用零散补丁宣称修复完成。\n2. 从真实数据中脱敏抽样，建立事件身份、主张归因和最终展示三层金标准；优先标注已知难例。\n3. 写一份正式 schema：`message → mention → claim → event → topic_family → presentation`，为每层定义允许和禁止的合并。\n4. 实现完全离线的四方案对照，不复用当前首页 `sameTopic` 或标题规则作为真值。\n5. 增加“候选集审计页”：并排展示原文、槽位、支持/冲突证据和模型裁决，允许人工改为拆分、合并、相关但不同或上下文不足。\n6. 只有在灾难性错误合并、归因和证据覆盖达到门槛后，才让新结果进入影子模式；影子输出不得影响首页。\n7. 最后做一次真正端到端验收：输入固定消息集，截图/DOM/API 三方核对主卡片、详情、来源和可回溯证据。"
+      },
+      {
+        "id": "further_questions",
+        "type": "markdown",
+        "body": "## 仍需回答的问题\n\n- 产品最终想呈现的是“事件日报”“主题观察”还是“人物观点与行动线索”？三者可以共用证据层，但合并标准和版面不同。\n- 哪些错误更不可接受：漏掉一个小事件，还是把两个不同事件合并？当前问题表明应显著提高错误合并的成本权重。\n- 私聊、群聊、跨群转述是否允许共享事件 ID？什么证据足以跨会话合并？\n- 用户是否需要手工确认主题族和别名，并把拆分/合并反馈用于主动学习？\n- 标题应允许多大程度的编辑化表达？建议默认只做事实型标题，直到证据和关系审核成熟。\n- 哪些字段必须在第一屏可见，哪些只需在审计展开层保留？这应由产品目标决定，而不是由后端已有字段反推。"
+      }
+    ]
+  },
+  "snapshot": {
+    "version": 1,
+    "generatedAt": "2026-08-26T12:00:00+08:00",
+    "status": "ready",
+    "datasets": {
+      "evidence_coverage": [
+        { "area": "事件身份与关系", "source_count": 11, "scope": "新闻流聚类、事件共指、事件关系" },
+        { "area": "归因与主张结构", "source_count": 5, "scope": "说话人、主张、实体与论元" },
+        { "area": "摘要与一致性", "source_count": 6, "scope": "多文档摘要、NLI、QA、实体一致性" },
+        { "area": "评测与人机协同", "source_count": 7, "scope": "端到端评测、行为测试、主动学习" },
+        { "area": "应用数据与审计", "source_count": 4, "scope": "来源、关系图、playbook、人工反馈" }
+      ],
+      "problem_mapping": [
+        { "order": 1, "failure": "GPT 重置、中转、消耗被合并", "research_task": "跨文档事件共指 + 事件关系", "required_output": "同一事件 / 相关事件 / 仅同主题，并附槽位证据", "anti_pattern": "共同关键词或单一向量阈值" },
+        { "order": 2, "failure": "人物、对象和细节消失", "research_task": "说话人归因 + 主张抽取 + 论元抽取", "required_output": "说话人 / 主张 / 对象 / 证据", "anti_pattern": "先压缩成无主体摘要" },
+        { "order": 3, "failure": "泛化标题掩盖错误聚类", "research_task": "受约束生成 + 事实一致性", "required_output": "标题 claim 引用与证据校验", "anti_pattern": "关键词命中后套编辑模板" },
+        { "order": 4, "failure": "首页再次去重和合并", "research_task": "数据契约 + 端到端评测", "required_output": "稳定事件 ID、来源与渲染不变量", "anti_pattern": "前端自建 sameTopic 语义裁决" },
+        { "order": 5, "failure": "API 通过但页面仍错", "research_task": "行为测试 + 管线评测", "required_output": "固定输入到最终 DOM/截图的验收", "anti_pattern": "只看结构字段和候选数量" }
+      ],
+      "project_comparison": [
+        { "order": 1, "project": "BERTopic", "best_use": "主题族发现、宽召回、探索", "fit": "中：适合离线基线", "do_not_use_as": "同一事件裁决器" },
+        { "order": 2, "project": "OmniEvent", "best_use": "中英文事件触发/论元与统一评测", "fit": "高：优先做结构抽取实验", "do_not_use_as": "完整聊天情报产品" },
+        { "order": 3, "project": "DeepKE / DocEE", "best_use": "中文实体关系事件、文档级事件", "fit": "中高：验证中文域和长上下文", "do_not_use_as": "无需标注即可上线的黑盒" },
+        { "order": 4, "project": "HyperCoref / SECURE / 跨文档共指参考实现", "best_use": "事件共指研究基线、评分与错误分析", "fit": "中：离线参考价值高", "do_not_use_as": "未经域适配的生产依赖" },
+        { "order": 5, "project": "PRIMERA + SummaC/QAFactEval", "best_use": "边界确定后的多文档摘要与一致性检查", "fit": "中：摘要阶段候选", "do_not_use_as": "修复错误聚类的工具" },
+        { "order": 6, "project": "OpenCTI / IntelOwl", "best_use": "来源、关系、置信度、playbook 与审计体验", "fit": "高：借鉴数据模型", "do_not_use_as": "通用中文语义分析模型" },
+        { "order": 7, "project": "Argilla", "best_use": "人工标注、错误反馈、持续评测", "fit": "高：适合建立金标准闭环", "do_not_use_as": "自动分析引擎" }
+      ],
+      "experiments": [
+        { "order": 1, "variant": "A 结构化规则基线", "mechanism": "实体/动作/时间/诉求硬门槛 + 回复链", "question": "仅修正身份定义能改善多少？", "risk": "召回偏低、别名覆盖不足" },
+        { "order": 2, "variant": "B 实体与时间感知向量", "mechanism": "稀疏 + 稠密 + 实体重合 + 时间衰减", "question": "能否提高召回而不恶化误合并？", "risk": "父类语义仍压过细粒度冲突" },
+        { "order": 3, "variant": "C LLM 歧义裁决", "mechanism": "只处理候选对，输出槽位、关系、理由和证据", "question": "LLM 能否识别“同主题但不同事件”？", "risk": "不稳定、成本高、理由可能不忠实" },
+        { "order": 4, "variant": "D 混合方案", "mechanism": "规则硬否决 + 向量召回 + LLM/交叉编码器裁决", "question": "是否达到最低灾难性误合并率？", "risk": "管线复杂，需要统一版本与端到端审核" }
+      ]
+    },
+    "accessIssues": []
+  },
+  "sources": [
+    {
+      "id": "research_sources",
+      "label": "论文、GitHub 项目与本地代码核对清单",
+      "path": "docs/research/semantic-intelligence-research-sources.md"
+    },
+    {
+      "id": "evidence_coverage_transform",
+      "label": "调研证据覆盖人工编码",
+      "path": "docs/research/semantic-intelligence-research-sources.md",
+      "query": {
+        "engine": "portable-sql",
+        "language": "sql",
+        "description": "把来源清单按方法领域人工编码；同一来源允许跨领域计数。",
+        "sql": "SELECT area, source_count, scope FROM (VALUES ('事件身份与关系', 11, '新闻流聚类、事件共指、事件关系'), ('归因与主张结构', 5, '说话人、主张、实体与论元'), ('摘要与一致性', 6, '多文档摘要、NLI、QA、实体一致性'), ('评测与人机协同', 7, '端到端评测、行为测试、主动学习'), ('应用数据与审计', 4, '来源、关系图、playbook、人工反馈')) AS evidence_coverage(area, source_count, scope)"
+      }
+    },
+    {
+      "id": "problem_mapping_transform",
+      "label": "失败模式与研究任务映射",
+      "path": "docs/research/semantic-intelligence-research-sources.md",
+      "query": {
+        "engine": "portable-sql",
+        "language": "sql",
+        "description": "将已核对的本地失败模式映射到对应研究任务和输出契约。",
+        "sql": "SELECT failure, research_task, required_output, anti_pattern FROM (VALUES ('GPT 重置、中转、消耗被合并', '跨文档事件共指 + 事件关系', '同一事件 / 相关事件 / 仅同主题，并附槽位证据', '共同关键词或单一向量阈值'), ('人物、对象和细节消失', '说话人归因 + 主张抽取 + 论元抽取', '说话人 / 主张 / 对象 / 证据', '先压缩成无主体摘要'), ('泛化标题掩盖错误聚类', '受约束生成 + 事实一致性', '标题 claim 引用与证据校验', '关键词命中后套编辑模板'), ('首页再次去重和合并', '数据契约 + 端到端评测', '稳定事件 ID、来源与渲染不变量', '前端自建 sameTopic 语义裁决'), ('API 通过但页面仍错', '行为测试 + 管线评测', '固定输入到最终 DOM/截图的验收', '只看结构字段和候选数量')) AS problem_mapping(failure, research_task, required_output, anti_pattern)"
+      }
+    },
+    {
+      "id": "project_comparison_transform",
+      "label": "开源项目能力边界编码",
+      "path": "docs/research/semantic-intelligence-research-sources.md",
+      "query": {
+        "engine": "portable-sql",
+        "language": "sql",
+        "description": "从官方项目说明人工编码最适用途、匹配度和禁止承担的职责。",
+        "sql": "SELECT project, best_use, fit, do_not_use_as FROM (VALUES ('BERTopic', '主题族发现、宽召回、探索', '中：适合离线基线', '同一事件裁决器'), ('OmniEvent', '中英文事件触发/论元与统一评测', '高：优先做结构抽取实验', '完整聊天情报产品'), ('DeepKE / DocEE', '中文实体关系事件、文档级事件', '中高：验证中文域和长上下文', '无需标注即可上线的黑盒'), ('HyperCoref / SECURE / 跨文档共指参考实现', '事件共指研究基线、评分与错误分析', '中：离线参考价值高', '未经域适配的生产依赖'), ('PRIMERA + SummaC/QAFactEval', '边界确定后的多文档摘要与一致性检查', '中：摘要阶段候选', '修复错误聚类的工具'), ('OpenCTI / IntelOwl', '来源、关系、置信度、playbook 与审计体验', '高：借鉴数据模型', '通用中文语义分析模型'), ('Argilla', '人工标注、错误反馈、持续评测', '高：适合建立金标准闭环', '自动分析引擎')) AS project_comparison(project, best_use, fit, do_not_use_as)"
+      }
+    },
+    {
+      "id": "experiment_transform",
+      "label": "离线实验方案编码",
+      "path": "docs/research/semantic-intelligence-research-sources.md",
+      "query": {
+        "engine": "portable-sql",
+        "language": "sql",
+        "description": "将建议的四个离线方案整理为统一对照实验矩阵。",
+        "sql": "SELECT variant, mechanism, question, risk FROM (VALUES ('A 结构化规则基线', '实体/动作/时间/诉求硬门槛 + 回复链', '仅修正身份定义能改善多少？', '召回偏低、别名覆盖不足'), ('B 实体与时间感知向量', '稀疏 + 稠密 + 实体重合 + 时间衰减', '能否提高召回而不恶化误合并？', '父类语义仍压过细粒度冲突'), ('C LLM 歧义裁决', '只处理候选对，输出槽位、关系、理由和证据', 'LLM 能否识别“同主题但不同事件”？', '不稳定、成本高、理由可能不忠实'), ('D 混合方案', '规则硬否决 + 向量召回 + LLM/交叉编码器裁决', '是否达到最低灾难性误合并率？', '管线复杂，需要统一版本与端到端审核')) AS experiments(variant, mechanism, question, risk)"
+      }
+    }
+  ]
+}

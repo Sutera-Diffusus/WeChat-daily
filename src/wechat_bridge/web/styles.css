@@ -387,6 +387,10 @@ h3 { font-size: 15px; letter-spacing: -.02em; line-height: 1.3; }
 .readonly-tag { display: inline-flex; align-items: center; padding: 4px 8px; border: 1px solid #d9e8df; border-radius: 999px; color: var(--wechat-dark); background: #f2faf5; font-size: 9px; white-space: nowrap; }
 .notice { margin-top: 10px; padding: 8px 11px; border-left: 3px solid var(--wechat); border-radius: 5px; color: var(--wechat-dark); background: var(--wechat-soft); font-size: 10px; }
 .notice.error { border-color: var(--red); color: var(--red); background: var(--red-soft); }
+.sync-safety-note { display: flex; align-items: flex-start; gap: 9px; margin: 10px 0 13px; padding: 9px 12px; border: 1px solid #ead7aa; border-left: 4px solid var(--amber); border-radius: 7px; color: #6b531f; background: var(--amber-soft); font-size: 10px; line-height: 1.6; }
+.sync-safety-note p { min-width: 0; }
+.sync-safety-note strong { color: #4f3a12; }
+.sync-safety-mark { display: grid; width: 18px; height: 18px; flex: 0 0 auto; place-items: center; border-radius: 50%; color: #fff; background: var(--amber); font: 700 12px/1 var(--mono); }
 .new-messages-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; padding: 8px 11px; border: 1px solid #bfe7cc; border-radius: 8px; color: var(--wechat-dark); background: #effbf3; font-size: 10px; }
 .new-messages-banner strong { font: 11px var(--mono); }
 
@@ -601,6 +605,31 @@ h3 { font-size: 15px; letter-spacing: -.02em; line-height: 1.3; }
 .topic-brief-track i { display: block; height: 100%; border-radius: inherit; background: var(--purple); }
 .topic-brief-item p { margin-top: 6px; color: var(--muted); font-size: 10px; line-height: 1.55; overflow-wrap: anywhere; }
 .topic-brief-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; color: var(--faint); font-size: 9px; }
+.topic-detail { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #dce8df; }
+.topic-detail-entities { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: var(--faint); font-size: 9px; }
+.topic-detail-entities b { padding: 2px 5px; border: 1px solid #bfd5c6; border-radius: 999px; color: #315c45; background: #f2faf4; font-weight: 700; }
+.topic-detail-speakers { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 6px; color: var(--faint); font-size: 9px; }
+.topic-detail-speakers b { padding: 2px 5px; border: 1px solid #d8c99a; border-radius: 999px; color: #6d561b; background: #fff9df; font-weight: 700; }
+.topic-detail-statements { display: grid; gap: 4px; margin: 7px 0 0; padding: 0; list-style: none; }
+.topic-detail-statements li { display: grid; grid-template-columns: max-content max-content minmax(0, 1fr); gap: 5px; align-items: baseline; padding: 5px 7px; border-left: 3px solid #e7d68c; background: #fffdf2; font-size: 10px; line-height: 1.5; }
+.topic-detail-statements strong { color: var(--text); }
+.topic-detail-statements small { max-width: 18ch; overflow: hidden; color: var(--faint); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.topic-detail-statements span { min-width: 0; color: var(--muted); overflow-wrap: anywhere; }
+.topic-detail-points, .brief-detail-points { display: grid; gap: 3px; margin: 6px 0 0; padding-left: 16px; color: var(--muted); font-size: 10px; line-height: 1.55; }
+.topic-detail-evidence, .brief-detail-evidence { margin-top: 7px; border-top: 1px solid #e6eee8; }
+.topic-detail-evidence summary, .brief-detail-evidence summary { padding-top: 7px; color: var(--wechat-dark); font-size: 10px; font-weight: 700; cursor: pointer; }
+.topic-detail-evidence .event-evidence, .brief-detail-evidence .event-evidence { margin-top: 5px; border: 1px solid #e1ebe4; border-radius: 3px; background: #fbfdfb; }
+.topic-fact-check { margin-top: 9px; padding-top: 8px; border-top: 1px dashed #d8e3dc; }
+.topic-fact-check-head { display: flex; align-items: center; gap: 7px; color: var(--wechat-dark); font-size: 10px; }
+.topic-fact-check-head span { color: var(--faint); }
+.fact-check-button, .fact-check-refresh { margin-left: auto; padding: 3px 7px; border: 1px solid #6b927e; border-radius: 3px; color: #24583c; background: #f3fbf5; font-size: 10px; cursor: pointer; }
+.topic-fact-check ul { display: grid; gap: 5px; margin: 7px 0 0; padding: 0; list-style: none; }
+.topic-fact-check li { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 7px; padding: 5px 7px; border-left: 3px solid #bfd5c6; background: #f8fcf9; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.topic-fact-check li b { color: #6e5a1c; white-space: nowrap; }
+.topic-fact-check li small { grid-column: 2; color: #4d7487; }
+.topic-fact-check li a { color: inherit; text-decoration: underline; }
+.topic-fact-check p { margin: 6px 0 0; color: var(--faint); font-size: 10px; }
+.brief-detail-points { margin: 8px 0 0; padding: 8px 12px 8px 27px; border-left: 3px solid #bfd5c6; background: #f7fbf8; }
 .hour-chart { display: grid; grid-template-columns: repeat(24, minmax(4px, 1fr)); align-items: end; gap: 3px; min-height: 112px; margin-top: 16px; padding: 0 2px 16px; border-bottom: 1px solid var(--line); }
 .hour-bar { position: relative; min-height: 2px; border-radius: 3px 3px 0 0; background: #b9e8ca; }
 .hour-bar.active { background: var(--wechat); }
@@ -628,6 +657,9 @@ h3 { font-size: 15px; letter-spacing: -.02em; line-height: 1.3; }
 .ai-finding-detail { display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 8px; margin-top: 4px; }
 .ai-finding-detail b { color: var(--muted); font-size: 9px; }
 .ai-finding-detail span { overflow-wrap: anywhere; }
+.ai-finding-boundary { display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 8px; margin-top: 5px; color: #805c21; }
+.ai-finding-boundary b { font-size: 9px; }
+.ai-finding-boundary span { overflow-wrap: anywhere; }
 .ai-finding-next { margin-top: 6px; color: var(--wechat-dark); font-size: 9px; }
 .ai-finding-evidence { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
 .ai-evidence { padding: 3px 6px; border: 0; border-radius: 4px; color: var(--blue); background: var(--blue-soft); font-size: 9px; }

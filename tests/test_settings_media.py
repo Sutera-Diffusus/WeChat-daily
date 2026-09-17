@@ -15,7 +15,7 @@ from wechat_bridge.models import HealthStatus, IncomingMessage, ReplyDecision, S
 from wechat_bridge.service import BridgeService
 from wechat_bridge.settings import WorkbenchSettings
 from wechat_bridge.store import SQLiteStore
-from wechat_bridge.web import start_dashboard_thread
+from wechat_bridge.web import BridgeRequestHandler, start_dashboard_thread
 
 
 class SettingsAdapter(WeChatAdapter):
@@ -282,7 +282,8 @@ def test_ai_generator_uses_chat_completions_for_custom_base_url(monkeypatch):
     generator = OpenAIAnalysisGenerator(
         api_key="test-key",
         base_url="https://api.deepseek.com",
-        model="deepseek-v4-flash",
+        model="deepseek-flash",
+        reasoning_effort="max",
     )
     result = generator.analyze(
         {"start": "2026-08-21", "end": "2026-08-21"},
@@ -302,5 +303,221 @@ def test_ai_generator_uses_chat_completions_for_custom_base_url(monkeypatch):
     assert result["brief"].startswith("发现")
     assert calls["api_key"] == "test-key"
     assert calls["base_url"] == "https://api.deepseek.com"
-    assert calls["model"] == "deepseek-v4-flash"
+    assert calls["model"] == "deepseek-flash"
+    assert calls["reasoning_effort"] == "max"
+    assert calls["max_tokens"] == 65536
     assert calls["response_format"] == {"type": "json_object"}
+
+
+def test_ai_generator_packet_mode_uses_smaller_medium_reasoning_call(monkeypatch):
+    calls = {}
+
+    class FakeCompletions:
+        def create(self, **kwargs):
+            calls.update(kwargs)
+            payload = {"brief": "", "findings": [], "limitations": []}
+            return SimpleNamespace(
+                choices=[SimpleNamespace(message=SimpleNamespace(content=json.dumps(payload)))]
+            )
+
+    class FakeOpenAI:
+        def __init__(self, api_key, base_url=None):
+            self.chat = SimpleNamespace(completions=FakeCompletions())
+
+    monkeypatch.setitem(sys.modules, "openai", SimpleNamespace(OpenAI=FakeOpenAI))
+    result = OpenAIAnalysisGenerator(
+        api_key="test-key",
+        base_url="https://api.deepseek.com",
+        reasoning_effort="max",
+        max_tokens=65536,
+    ).analyze(
+        {"start": "2026-08-21", "end": "2026-08-21"},
+        [{"evidence_ref": "m-001", "content": "请确认方案"}],
+        packet_mode=True,
+    )
+
+    assert result["findings"] == []
+    assert calls["reasoning_effort"] == "medium"
+    assert calls["max_tokens"] == 16384
+    assert "\"claims\"" in calls["messages"][1]["content"]
+    instructions = calls["messages"][0]["content"]
+    assert "庄重平实、准确凝练" in instructions
+    assert "每条 claim 必须保留明确发言人姓名" in instructions
+    assert "不得使用有人、群友、成员等无主表述" in instructions
+
+
+def test_ai_generator_global_prompt_requires_authoritative_style_and_explicit_attribution(monkeypatch):
+    calls = {}
+
+    class FakeCompletions:
+        def create(self, **kwargs):
+            calls.update(kwargs)
+            message = SimpleNamespace(content=json.dumps({
+                "brief": "",
+                "situation": "",
+                "key_changes": [],
+                "themes": [],
+                "open_questions": [],
+                "timeline": [],
+                "findings": [],
+                "limitations": [],
+            }, ensure_ascii=False))
+            return SimpleNamespace(choices=[SimpleNamespace(message=message, finish_reason="stop")])
+
+    class FakeOpenAI:
+        def __init__(self, **_kwargs):
+            self.chat = SimpleNamespace(completions=FakeCompletions())
+
+    monkeypatch.setitem(sys.modules, "openai", SimpleNamespace(OpenAI=FakeOpenAI))
+    OpenAIAnalysisGenerator(
+        api_key="test-key",
+        base_url="https://api.deepseek.com",
+    ).analyze(
+        {"start": "2026-09-08", "end": "2026-09-08"},
+        [{"evidence_ref": "m-1", "sender_name": "张三", "content": "方案已经完成测试"}],
+    )
+
+    instructions = calls["messages"][0]["content"]
+    assert "《人民日报》《新华社》《先锋》《文汇》" in instructions
+    assert "庄重平实、鲜活有力" in instructions
+    assert "剔除空话、套话与重复冗余" in instructions
+    assert "谁说了什么必须保留明确归属" in instructions
+    assert "不得使用有人、群友、成员等无主表述替代已知姓名" in instructions
+
+
+def test_ai_generator_accumulates_safe_usage_across_empty_retry(monkeypatch):
+    calls = 0
+
+    class FakeCompletions:
+        def create(self, **_kwargs):
+            nonlocal calls
+            calls += 1
+            content = "" if calls == 1 else json.dumps(
+                {"brief": "完成", "findings": [], "limitations": []}
+            )
+            usage = SimpleNamespace(
+                prompt_tokens=100,
+                prompt_cache_hit_tokens=80 if calls == 2 else 0,
+                prompt_cache_miss_tokens=20 if calls == 2 else 100,
+                completion_tokens=10,
+                completion_tokens_details=SimpleNamespace(reasoning_tokens=6),
+            )
+            return SimpleNamespace(
+                choices=[SimpleNamespace(
+                    message=SimpleNamespace(content=content, reasoning_content=""),
+                    finish_reason="stop",
+                )],
+                usage=usage,
+            )
+
+    class FakeOpenAI:
+        def __init__(self, api_key, base_url=None):
+            self.chat = SimpleNamespace(completions=FakeCompletions())
+
+    monkeypatch.setitem(sys.modules, "openai", SimpleNamespace(OpenAI=FakeOpenAI))
+    result = OpenAIAnalysisGenerator(
+        api_key="test-key", base_url="https://api.deepseek.com"
+    ).analyze(
+        {"start": "2026-08-21", "end": "2026-08-21"},
+        [{"evidence_ref": "m-001", "content": "请确认方案"}],
+    )
+
+    assert result["_usage"] == {
+        "prompt_tokens": 200,
+        "input_tokens": 200,
+        "prompt_cache_hit_tokens": 80,
+        "prompt_cache_miss_tokens": 120,
+        "completion_tokens": 20,
+        "output_tokens": 20,
+        "reasoning_tokens": 12,
+        "attempts": 2,
+        "retries": 1,
+    }
+
+
+def test_ai_generator_stage_clone_applies_packet_effort_and_budget():
+    source = OpenAIAnalysisGenerator(
+        model="deepseek-flash",
+        api_key="test-key",
+        base_url="https://api.deepseek.com",
+        reasoning_effort="max",
+        max_tokens=65536,
+    )
+
+    packet = BridgeRequestHandler._ai_generator_with_effort(source, "low", 8192)
+
+    assert packet.reasoning_effort == "low"
+    assert packet.max_tokens == 8192
+    assert packet.packet_reasoning_effort == "low"
+    assert packet.packet_max_tokens == 8192
+
+
+def test_ai_generator_environment_overrides_model_and_normalizes_reasoning(monkeypatch):
+    monkeypatch.setenv("OPENAI_WECHAT_ANALYSIS_MODEL", "deepseek-flash")
+    monkeypatch.setenv("OPENAI_WECHAT_ANALYSIS_REASONING_EFFORT", "MAX")
+    settings = SimpleNamespace(
+        snapshot=lambda **_kwargs: {
+            "ai": {
+                "model": "persisted-model",
+                "api_key": "test-key",
+                "base_url": "https://api.deepseek.com",
+            }
+        }
+    )
+    handler = SimpleNamespace(server=SimpleNamespace(settings=settings))
+
+    generator = BridgeRequestHandler._ai_generator(handler)
+
+    assert generator.model == "deepseek-flash"
+    assert generator.reasoning_effort == "max"
+
+
+def test_ai_generator_ignores_invalid_reasoning_effort(monkeypatch):
+    monkeypatch.setenv("OPENAI_WECHAT_ANALYSIS_REASONING_EFFORT", "turbo")
+    settings = SimpleNamespace(
+        snapshot=lambda **_kwargs: {
+            "ai": {"model": "persisted-model", "api_key": "test-key"}
+        }
+    )
+    handler = SimpleNamespace(server=SimpleNamespace(settings=settings))
+
+    generator = BridgeRequestHandler._ai_generator(handler)
+
+    assert generator.reasoning_effort is None
+
+
+def test_ai_analysis_max_tokens_defaults_and_explicit_override():
+    regular = OpenAIAnalysisGenerator(
+        api_key="test-key",
+        base_url="https://api.deepseek.com",
+    )
+    maximum_reasoning = OpenAIAnalysisGenerator(
+        api_key="test-key",
+        base_url="https://api.deepseek.com",
+        reasoning_effort="max",
+    )
+    explicit = OpenAIAnalysisGenerator(
+        api_key="test-key",
+        base_url="https://api.deepseek.com",
+        reasoning_effort="max",
+        max_tokens=49152,
+    )
+
+    assert regular.max_tokens == 32768
+    assert maximum_reasoning.max_tokens == 65536
+    assert explicit.max_tokens == 49152
+
+
+def test_ai_generator_max_tokens_environment_override_is_safely_bounded(monkeypatch):
+    settings = SimpleNamespace(
+        snapshot=lambda **_kwargs: {
+            "ai": {"model": "persisted-model", "api_key": "test-key"}
+        }
+    )
+    handler = SimpleNamespace(server=SimpleNamespace(settings=settings))
+
+    monkeypatch.setenv("OPENAI_WECHAT_ANALYSIS_MAX_TOKENS", "49152")
+    assert BridgeRequestHandler._ai_generator(handler).max_tokens == 49152
+
+    monkeypatch.setenv("OPENAI_WECHAT_ANALYSIS_MAX_TOKENS", "999999")
+    assert BridgeRequestHandler._ai_generator(handler).max_tokens == 32768

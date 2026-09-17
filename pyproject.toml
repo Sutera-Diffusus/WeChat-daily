@@ -31,5 +31,5 @@ where = ["src"]
 wechat_bridge = ["web/*.html", "web/*.css", "web/*.js", "web/assets/editorial/*"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["src", "tests"]
 testpaths = ["tests"]

@@ -1,0 +1,276 @@
+{
+  "surface": "report",
+  "manifest": {
+    "version": 1,
+    "surface": "report",
+    "title": "DeepSeek 缓存命中低诊断：交接不是已证实根因",
+    "description": "面向技术审阅的 cache、请求协议与交接边界诊断；仅使用公开代码与 body-free development 汇总。",
+    "generatedAt": "2026-08-28T00:00:00Z",
+    "cards": [],
+    "charts": [],
+    "tables": [
+      {
+        "id": "cache_run_comparison",
+        "title": "不同 development run 的 cache 与 provider 计数",
+        "subtitle": "同一 280-message development 输入；cache 计数按各 runner 自报口径，provider attempts 与 candidate/model outputs 分列。",
+        "dataset": "cache_run_comparison",
+        "sourceId": "body_free_run_summaries",
+        "defaultSort": { "field": "provider_attempts", "direction": "desc" },
+        "columns": [
+          { "field": "run", "label": "Run", "type": "text" },
+          { "field": "model", "label": "Model", "type": "text" },
+          { "field": "cache_layer", "label": "Cache 口径", "type": "text" },
+          { "field": "cache_hits", "label": "Local hits", "type": "number" },
+          { "field": "cache_misses", "label": "Local misses", "type": "number" },
+          { "field": "provider_attempts", "label": "Provider attempts", "type": "number" },
+          { "field": "successful_outputs", "label": "Successful outputs", "type": "number" },
+          { "field": "latency_ms", "label": "Latency (ms)", "type": "number" },
+          { "field": "observed_result", "label": "Observed result", "type": "text" }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "id": "code_local_cache",
+        "label": "VersionedBundleCache and encoder",
+        "path": "src/wechat_bridge/bundle_semantics.py",
+        "description": "Local cache is in-memory; key includes input, schema, model, prompt and ruleset; only validated complete output is put."
+      },
+      {
+        "id": "code_v29_runner",
+        "label": "v2.9 runner accounting",
+        "path": "src/wechat_bridge/contextual_bundle_pipeline_v2_9_runner.py",
+        "description": "Each run constructs a fresh BundleSemanticPipeline and VersionedBundleCache; provider attempts are counted separately from candidate decisions."
+      },
+      {
+        "id": "code_wire_request",
+        "label": "Semantic wire request boundary",
+        "path": "src/wechat_bridge/semantic_wire.py",
+        "description": "Provider request is fixed system/instructions plus dynamic user/input payload; symbol-table hash and wire versions participate in context."
+      },
+      {
+        "id": "body_free_run_summaries",
+        "label": "Development run manifests and aggregate/cost summaries",
+        "path": "data/private/gold_standard/2026-08-25/contextual_bundle_pipeline_v2_9/aggregate.private.json",
+        "description": "Table cross-checks body-free manifest, aggregate, cost and error metadata for v2.8, v2.9 Flash/Pro, v2.10 JSON and v2.11 TSV. The five-run sample is too small for a chart; table-only presentation is intentional."
+      },
+      {
+        "id": "v28_body_free",
+        "label": "v2.8 body-free summary",
+        "path": "data/private/gold_standard/2026-08-25/contextual_bundle_pipeline_v2_8/aggregate.private.json",
+        "description": "Development-only aggregate/cost/error metadata; frozen_read=false and gold_loaded=false."
+      },
+      {
+        "id": "v29_flash_body_free",
+        "label": "v2.9 Flash body-free summary",
+        "path": "data/private/gold_standard/2026-08-25/contextual_bundle_pipeline_v2_9/aggregate.private.json",
+        "description": "Development-only Flash aggregate/cost/error/audit summary metadata."
+      },
+      {
+        "id": "v29_pro_body_free",
+        "label": "v2.9 Pro body-free summary",
+        "path": "data/private/gold_standard/2026-08-25/contextual_bundle_pipeline_v2_9_pro/aggregate.private.json",
+        "description": "Development-only Pro aggregate/cost/error metadata for same-package comparison."
+      },
+      {
+        "id": "v210_body_free",
+        "label": "v2.10 JSON capacity/error summary",
+        "path": "data/private/gold_standard/2026-08-25/contextual_bundle_pipeline_v2_10/capacity_report.private.json",
+        "description": "Body-free capacity and provider error metadata; effective semantic encoding was zero."
+      },
+      {
+        "id": "v211_body_free",
+        "label": "v2.11 TSV compatibility summary",
+        "path": "data/private/gold_standard/2026-08-25/contextual_bundle_pipeline_v2_11/manifest.private.json",
+        "description": "Body-free manifest metadata; provider_incompatible and production_blocked are explicit."
+      }
+    ],
+    "blocks": [
+      {
+        "id": "technical_summary",
+        "type": "markdown",
+        "body": "# DeepSeek 缓存命中低诊断：交接不是已证实根因\n\n**技术摘要。** 当前证据不支持“交接/传输损坏导致模型看不懂”这一因果解释。已验证的是：provider 侧前缀缓存与应用侧 `VersionedBundleCache` 是两层；应用 cache 是纯内存、按 run 新建，key 绑定输入 hash、schema、model、prompt、ruleset，并且只有验证通过的 complete 输出才写入。\n\n交接属于开发编排/进程生命周期边界，交接内容没有进入 DeepSeek 请求。若交接触发 runner 重启，纯内存 cache 会自然丢失，这是可解释的运行时副作用；但它不是请求传输损坏的证据。低命中更可能来自跨 run 的 protocol/prompt/model 变化、fresh process，以及 provider prefix-cache 未被观测或未被复用。v2.10/v2.11 的主要失败是容量和 wire/schema 遵从问题，而不是“模型没收到交接内容”。\n\n本报告的结论强度分为 `verified`、`likely`、`not causal` 和 `unresolved`；小样本 development artifact 只支持诊断假设，不支持 production quality 或 provider cache SLA。"
+      },
+      {
+        "id": "causal_classification",
+        "type": "markdown",
+        "body": "## 证据分层：什么已经验证、什么只是可能\n\n**Verified。** `VersionedBundleCache` 的实现是 in-memory dictionary；`BundleSemanticEncoder` 在每次 encode 前构造完整 request 和 cache key，命中后才读取，模型成功且本地 validation 通过后才 `put`。v2.9 runner 在每次 run 内新建 `VersionedBundleCache`。wire adapter 只把固定 system/instructions 与动态 user/input payload 交给 provider，同时将 symbol-table hash、wire schema/prompt 版本纳入 context。\n\n**Likely。** 只要输入 hash、schema、model、prompt 或 ruleset 任一变化，跨 run key 就不同；v2.8/v2.9/v2.10/v2.11 的 runner、wire prompt/schema、model override 或 symbol-table context 确实持续变化，因此跨版本复用本地 cache 不应预期。handoff 若重启开发 runner，也会清空该 in-memory cache。\n\n**Not causal / unsupported。** 没有证据表明 Codex 子智能体交接文本被拼进 provider user payload、改写了消息字节或造成 DeepSeek 解析损坏；handoff payload 与应用请求 payload 是不同边界。HTTP 成功、provider 已配置、同一 source 名称也不能证明 cache hit 或 LLM acceptance。\n\n**Unresolved。** provider/gateway 的 prefix-cache hit/miss、cache-control、prefix token 命中条件和跨请求保留时间没有在现有 body-free artifact 中暴露；也没有完成“同一进程、同一 key、连续两次 identical request”的 provider-side instrumented replay。因此不能把应用 cache miss 数直接当成 DeepSeek prefix-cache miss。"
+      },
+      {
+        "id": "run_comparison_table",
+        "type": "table",
+        "tableId": "cache_run_comparison"
+      },
+      {
+        "id": "metric_definitions",
+        "type": "markdown",
+        "body": "## 读表口径：cache、candidate、call 不是同一指标\n\n表中 `Local hits/misses` 是 runner 的本地 cache counter；v2.8 的 0/851 来自 semantic stats，v2.9-v2.11 的 0/0 表示这些 runner 没有记录到可复用的本地条目，**不表示 provider 命中率为 100%**。`Provider attempts` 只计已开始的 provider request；`Successful outputs` 只计 complete model-wire 输出；candidate decisions 是候选决策数，不能当调用数。\n\n在 v2.8，851 semantic model calls 与 14 provider attempts 并存，说明“模型决策/重试/预算 bookkeeping”和“实际请求”已经是不同口径。v2.9 起 artifact 明确保留 `provider_request_attempts`、`successful_model_outputs`、`failed_provider_attempts`、`unfinished_provider_attempts`、`candidate_decisions` 和 `budget_deferred` 分栏。"
+      },
+      {
+        "id": "why_failures_point_to_protocol",
+        "type": "markdown",
+        "body": "## 失败形态更支持协议/容量诊断\n\n同一 development 输入下，v2.9 Flash 有 13 次 provider attempts、4 个 successful outputs，Pro 有 14 次 attempts、3 个 outputs；两者分别出现 wire JSON/enum/evidence 类问题。v2.10 固定 2,000 input / 400 output budget 下有 3 个容量 deferred、9 个 compact JSON invalid、2 个 output-token-limit，最终 effective semantic encoding 为 0。v2.11 TSV 试验的 11 次 attempts 全部失败，validator 报告列数、枚举、handle 和空白行问题，并显式标记 `provider_incompatible=true`、`production_blocked=true`；health probe 也没有运行。\n\n这组结果说明：结构候选可以生成，不代表模型 wire 合同被满足；失败更像 provider/model 对固定 schema、预算和证据 handle 的遵从不足。交接是否发生不能解释这些具体 wire validator 错误。"
+      },
+      {
+        "id": "method_and_limits",
+        "type": "markdown",
+        "body": "## 方法、限制与稳健性\n\n本诊断只读取公开源码和 body-free development manifest/aggregate/cost/capacity/error 汇总；没有读取或复述消息正文、身份或 frozen/frozen_test。表的比较单位是同一 280-message development 输入及对应 runner artifact；v2.9 Flash/Pro 共享 scheduler selected package 约束，但不能替代真实 gold/holdout 语义评分。\n\n当前可稳健断言的是边界和计数定义，不是 provider 端缓存命中率。v2.9 的抽样 zero-tolerance 与 reactivation audit 只能说明审计样本的安全边界；v2.10/v2.11 没有 complete semantic output，语义质量和 zero-tolerance 应视为 N/A，而非“因为没有错误输出所以通过”。"
+      },
+      {
+        "id": "priority_actions",
+        "type": "markdown",
+        "body": "## 建议修复优先级\n\n1. **P0：先修 wire/capacity。** 对 selected package 做确定性 split，保留同一 package map、evidence handles 和 2,000/400 预算；provider health probe 必须证明 strict JSON/tool schema，而不是只返回非空文本。\n2. **P1：补 cache 可观测性。** 同时记录 local cache key、hit/miss、process/run identity，以及 provider request 的 prefix/cache metadata；绝不跨 model、prompt、schema 或 ruleset 复用。\n3. **P1：验证 handoff 影响范围。** 在同一 runner 进程内做 identical replay，再在明确重启/交接后重放；比较“同 key 同进程”“同 key 新进程”“版本变化”三组，不把三者混在一起。\n4. **P2：再做 provider A/B。** 以同一 input hash、selected package、prompt/schema/ruleset 和 14-call budget 重跑 Flash/Pro；把 provider attempts 与 candidate decisions 分开，只有实际成功且 evidence/schema 通过才计作 output。\n\n在 provider cache metadata 和 process continuity 未被测量前，不应把低 local-cache hit 归咎于交接，也不应据此切换首页生产流量。"
+      },
+      {
+        "id": "exact_replay_protocol",
+        "type": "markdown",
+        "body": "## 最小复核协议\n\n固定同一 development input fingerprint，固定 schema/prompt/ruleset/model，启动一个 runner 进程并提交相同 bundle 两次：预期第二次只能在相同 key 且 complete 已写入时出现 local hit。随后结束进程/模拟交接再提交第三次：若仅第三次 miss，说明是 in-memory lifetime；若同进程第二次也 miss，应检查 request canonicalization、symbol-table hash 或 provider adapter。最后只改变 model、prompt 或 schema 各一项，确认 key 变化且不会读取旧结果。\n\n这组 replay 必须保存 body-free run manifest、cache key digest、process/run id、request hash、provider cache metadata、status/usage 和错误码；禁止把正文、身份或 provider secret 放入 artifact。"
+      },
+      {
+        "id": "further_questions",
+        "type": "markdown",
+        "body": "## 仍需回答的问题\n\n- provider/gateway 是否返回 prefix-cache read/write token 或等价的命中元数据？\n- handoff 发生时具体 runner 是否被终止并重启，还是仅移动开发 checkout？\n- 同一 provider、同一 request hash 的重复调用是否保持完全相同的 system prefix 和 response-format 设置？\n- package split 后，实际输出覆盖率能否在 14/280 budget 内超过结构上限，并同时保持 evidence coverage 100%？\n\n这些问题未解决前，结论保持：**低 cache 不等于传输损坏；handoff 可能造成进程级冷 cache，但当前失败首因更接近跨版本 key 变化、容量不足和 provider wire 合同不匹配。**"
+      }
+    ]
+  },
+  "snapshot": {
+    "version": 1,
+    "generatedAt": "2026-08-28T00:00:00Z",
+    "status": "partial",
+    "datasets": {
+      "cache_run_comparison": [
+        {
+          "run": "v2.8",
+          "model": "deepseek-v4-flash",
+          "cache_layer": "semantic stats",
+          "cache_hits": 0,
+          "cache_misses": 851,
+          "provider_attempts": 14,
+          "successful_outputs": 8,
+          "latency_ms": 26569.53,
+          "observed_result": "8 complete; 840 pending"
+        },
+        {
+          "run": "v2.9 Flash",
+          "model": "deepseek-v4-flash",
+          "cache_layer": "runner bundle counter",
+          "cache_hits": 0,
+          "cache_misses": 0,
+          "provider_attempts": 13,
+          "successful_outputs": 4,
+          "latency_ms": 32277.02,
+          "observed_result": "4 complete; 844 pending; wire/schema failures"
+        },
+        {
+          "run": "v2.9 Pro",
+          "model": "deepseek-v4-pro",
+          "cache_layer": "runner bundle counter",
+          "cache_hits": 0,
+          "cache_misses": 0,
+          "provider_attempts": 14,
+          "successful_outputs": 3,
+          "latency_ms": 46471.784,
+          "observed_result": "3 complete; 845 pending; evidence/schema gaps"
+        },
+        {
+          "run": "v2.10 JSON",
+          "model": "deepseek-v4-flash",
+          "cache_layer": "runner bundle counter",
+          "cache_hits": 0,
+          "cache_misses": 0,
+          "provider_attempts": 11,
+          "successful_outputs": 0,
+          "latency_ms": 28959.933,
+          "observed_result": "0 complete; 0 effective semantic coverage"
+        },
+        {
+          "run": "v2.11 TSV",
+          "model": "deepseek-v4-flash",
+          "cache_layer": "runner bundle counter",
+          "cache_hits": 0,
+          "cache_misses": 0,
+          "provider_attempts": 11,
+          "successful_outputs": 0,
+          "latency_ms": 16047.596,
+          "observed_result": "0 complete; provider_incompatible; production_blocked"
+        }
+      ]
+    },
+    "accessIssues": [
+      {
+        "id": "development_only_no_frozen_score",
+        "dataset": "cache_run_comparison",
+        "message": "Only body-free development summaries were used; frozen/holdout semantic scoring and provider prefix-cache telemetry are unavailable."
+      }
+    ]
+  },
+  "sources": [
+    {
+      "id": "code_local_cache",
+      "label": "VersionedBundleCache and encoder",
+      "path": "src/wechat_bridge/bundle_semantics.py",
+      "description": "Local cache is in-memory; key includes input, schema, model, prompt and ruleset; only validated complete output is put."
+    },
+    {
+      "id": "code_v29_runner",
+      "label": "v2.9 runner accounting",
+      "path": "src/wechat_bridge/contextual_bundle_pipeline_v2_9_runner.py",
+      "description": "Each run constructs a fresh BundleSemanticPipeline and VersionedBundleCache; provider attempts are counted separately from candidate decisions."
+    },
+    {
+      "id": "code_wire_request",
+      "label": "Semantic wire request boundary",
+      "path": "src/wechat_bridge/semantic_wire.py",
+      "description": "Provider request is fixed system/instructions plus dynamic user/input payload; symbol-table hash and wire versions participate in context."
+    },
+    {
+      "id": "body_free_run_summaries",
+      "label": "Development run manifests and aggregate/cost summaries",
+      "path": "data/private/gold_standard/2026-08-25/contextual_bundle_pipeline_v2_9/aggregate.private.json",
+      "description": "Table cross-checks body-free manifest, aggregate, cost and error metadata for v2.8, v2.9 Flash/Pro, v2.10 JSON and v2.11 TSV."
+    },
+    {
+      "id": "v28_body_free",
+      "label": "v2.8 body-free summary",
+      "path": "data/private/gold_standard/2026-08-25/contextual_bundle_pipeline_v2_8/aggregate.private.json",
+      "description": "Development-only aggregate/cost/error metadata; frozen_read=false and gold_loaded=false."
+    },
+    {
+      "id": "v29_flash_body_free",
+      "label": "v2.9 Flash body-free summary",
+      "path": "data/private/gold_standard/2026-08-25/contextual_bundle_pipeline_v2_9/aggregate.private.json",
+      "description": "Development-only Flash aggregate/cost/error/audit summary metadata."
+    },
+    {
+      "id": "v29_pro_body_free",
+      "label": "v2.9 Pro body-free summary",
+      "path": "data/private/gold_standard/2026-08-25/contextual_bundle_pipeline_v2_9_pro/aggregate.private.json",
+      "description": "Development-only Pro aggregate/cost/error metadata for same-package comparison."
+    },
+    {
+      "id": "v210_body_free",
+      "label": "v2.10 JSON capacity/error summary",
+      "path": "data/private/gold_standard/2026-08-25/contextual_bundle_pipeline_v2_10/capacity_report.private.json",
+      "description": "Body-free capacity and provider error metadata; effective semantic encoding was zero."
+    },
+    {
+      "id": "v211_body_free",
+      "label": "v2.11 TSV compatibility summary",
+      "path": "data/private/gold_standard/2026-08-25/contextual_bundle_pipeline_v2_11/manifest.private.json",
+      "description": "Body-free manifest metadata; provider_incompatible and production_blocked are explicit."
+    }
+  ],
+  "package_info": {
+    "originUrl": "artifact://cache-diagnostic-report",
+    "controls": { "edit": false, "refresh": false, "share": false },
+    "portable_delivery": {
+      "requested": true,
+      "status": "blocked_by_validator_contract",
+      "table_only_intent": true,
+      "chart_suppressed": true,
+      "validator_error": "$.manifest.blocks must include at least one chart block for report artifacts",
+      "reader_not_generated": true,
+      "note": "The portable builder requires a chart block for surface=report, while this diagnostic intentionally uses one exact table because the five-run sample is too small for a chart. No synthetic or hidden chart was added."
+    }
+  }
+}

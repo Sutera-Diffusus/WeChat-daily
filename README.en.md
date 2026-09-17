@@ -35,17 +35,51 @@
 
 > <code>WeChat → adapter → normalized messages → SQLite → daily / weekly archive → explainable analysis → LiteChat workspace</code>
 >
-> v0.1.4 defaults to <strong>receive and read-only analysis</strong>: historical imports do not create reply tasks, and sending remains preview / test-only behind a runtime guard.
+> From v0.1.4 onward, LiteChat’s product boundary is <strong>permanently read-only</strong>: it receives, syncs, and analyzes; it does not auto-reply, manually send, or plan to add sending as a future feature.
 
 ---
 
 ## What LiteChat does
 
-LiteChat lives on your Windows machine and turns scattered WeChat conversations into dated, traceable briefings. It keeps the original context, gives each conclusion a way back to its source message, and leaves the final decision with you. The default workflow receives and analyzes local data; it does not send messages automatically.
+LiteChat lives on your Windows machine and turns scattered WeChat conversations into dated, traceable briefings. It keeps the original context, gives each conclusion a way back to its source message, and leaves the final decision with you. The default workflow receives and analyzes local data; it does not send messages automatically. “Local by default” is not a promise of zero account risk or that no data can ever leave the computer; read the boundary below first.
 
 The workflow is simple:
 
 `collect → archive → filter → explain → review`
+
+## Read this first: risk, data, and compliance boundaries
+
+- **The account-ban risk is not something this project can call small.** LiteChat is not an official WeChat product. Reading, syncing, or parsing the local WeChat database, using unofficial adapters, or probing internal WeChat behavior may trigger platform controls, account restrictions, temporary bans, or permanent bans. The project cannot promise safety or “no ban”; treat a primary account used for daily social and work communication as exposed to a materially significant risk. Read-only mode does not transfer that risk to the project.
+
+### Where does the account-ban risk mainly come from?
+
+“Materially significant risk” does not mean that launching LiteChat guarantees a ban, nor is it an honest percentage estimate: WeChat does not publish enough detection rules or hit-rate data. It is a risk classification across different exposure surfaces. The most direct exposure comes from letting a third-party program read or operate WeChat outside official interfaces, not from LiteChat’s own local `data/wechat_bridge.db` SQLite file:
+
+| Exposure | What the code actually does | Risk view | Default |
+| --- | --- | --- | --- |
+| Unofficial local database access | `wechatauto_db` uses `wechatauto-replica` to open encrypted message shards under WeChat `xwechat_files`, read message/contact/media indexes, and poll for changes | Local reads may not immediately create a server-side ban signal, but they touch internal database formats, decryption, and undocumented structures; this is a major broad reverse-engineering/compliance exposure | Default Windows adapter; read-only |
+| Window automation | `wxauto4` connects to the running WeChat window and listens/polls chats; it also retains a `SendMsg` path | Third-party control of the client is more automation-like than a local file read; sending raises the account exposure substantially | Fallback, not desktop default |
+| Hook / injection path | `hook_http` talks to an already-running local Hook service, receives `D0003` callbacks, and exposes a `SendTextMsg` call | Hook DLLs, process injection, and protocol/callback parsing are the highest technical and legal exposure. LiteChat does not download or inject a DLL itself, but an external Hook is still not an official interface | Not default; requires an external Hook |
+| Actual message sending | Only after `--live`, `--enable-sending`, confirmation, chat allowlisting, and target guards does it call the visible client or Hook send method | The most direct account-ban exposure: frequency, repetition, bulk reach, unusual targets, and unattended behavior can turn internal-data access into account automation | Disabled in release package |
+| AI / ASR transfer | Manual AI analysis sends candidate text; Doubao transcription sends selected voice audio | Primarily a privacy/provider-retention risk, not the core account-ban vector; it becomes an additional account risk only when combined with automated sending | User-enabled |
+
+As a rough exposure ordering: **actual sending/automation > Hook or injection > unofficial database parsing > local rule analysis alone**. This is not an official WeChat probability ranking; it is a risk layering based on control level and platform visibility. A read-only database read may not produce obvious network sending, so it would be wrong to claim that one read guarantees a ban. It can still violate platform rules, be treated as abnormal client/internal-data access, or become much riskier when combined with a Hook, UI automation, broader chat scope, or sending.
+
+The default Windows package starts its backend without `--live` or `--enable-sending`, and the normal workspace does not send messages; it does, however, read the local WeChat database. That is “read-only,” not “risk-free.” If a user enables `--live`, `--enable-sending`, `--allow-other-chats`, `wxauto4`, a Hook service, or UIA hot activation, the exposure is materially above the default release path and should not be described as an ordinary read-only tool.
+
+### Sync-use guidance
+
+Sync reads local WeChat data. Even though LiteChat is currently read-only, it cannot rule out platform controls, account restrictions, or other compliance risk. Sync only when necessary, avoid repeated clicks or immediate retries after a failure, and— as a conservative initial guideline—keep manual historical syncs to no more than 2–3 times per day and spread them out. This is not a safety threshold or a no-ban guarantee; follow WeChat’s platform rules and carefully assess whether to use a primary account.
+
+The “auto-fetch new messages” setting only reads the local LiteChat workspace; it does not initiate historical sync. The “Sync” action in the date-range toolbar is what scans the local WeChat history database. Both are read-only, but read-only does not mean risk-free.
+
+- **“The full WeChat database is not uploaded” has a concrete meaning.** The default intake, history sync, rule analysis, and desktop communication run locally; the project does not automatically send a database file or full database to the project author. Data leaves the machine only when you explicitly enable an external service:
+  - After you manually confirm a second-pass AI analysis, the configured AI provider receives a limited candidate set: candidate text (up to 360 characters per item), up to 8 nearby same-chat snippets (up to 240 characters each), timestamps, chat names, sender names/aliases, self/group flags, rule signals, candidate state/type, topic/event summaries, counts, and evidence references. The default limit is 120 candidates and the API maximum is 200. Common `wxid` / `gh_` identifiers, local paths, MD5 values, emails, and phone numbers are replaced, but this is not anonymization; message text, names, chats, and times can still identify people.
+  - If native local transcription is unavailable and you enable Doubao ASR and click transcription, LiteChat decodes the selected WeChat voice locally and sends the audio to Doubao. This is not text-only transfer; retention and processing follow the provider’s terms and privacy policy.
+  - If you actively use the Codex plugin to read messages, the returned message content is handed to the client/model invoking that plugin. That path is outside the default local-workspace boundary and must be assessed under the caller’s data policy.
+  - Ordinary local sync does not automatically upload the full database, cookies, WeChat login state, or the entire media directory; self-configured AI, ASR, Hook, or other endpoints are outside that guarantee.
+- **Read-only is a permanent product boundary, not a temporary status.** “Read-only / dry-run” is not a soft way of saying that automatic sending may arrive later. LiteChat will not implement or expose auto-replies, automatic sending, bulk sending, or sending on the user’s behalf, and will not plan these as future features. The supported workflow only receives, syncs, organizes, analyzes, and links evidence; the user retains all decisions and any action inside WeChat.
+- **Tencent legal and broad reverse-engineering risk must be taken seriously.** Hooking, database decryption, protocol parsing, feature parsing, or parsing information inside WeChat may be viewed by the platform or rights holder as unauthorized reverse engineering, cracking, or prohibited automation; public community/forum feedback has also described multiple related projects or promotions receiving lawyer letters (this document does not independently determine the facts or legal liability of any case). “Read-only,” “no injection,” and “no automatic sending” do not establish legality or immunity from enforcement. Follow the current [WeChat Software License and Service Agreement](https://weixin.qq.com/agreement?lang=zh_CN), platform rules, and applicable law; account, data, compliance, and legal risks remain with the user. This is not legal advice.
 
 ## Launch poster
 
@@ -55,6 +89,8 @@ The workflow is simple:
 
 - [Features](#features)
 - [What LiteChat does](#what-litechat-does)
+- [Read this first: risk, data, and compliance boundaries](#read-this-first-risk-data-and-compliance-boundaries)
+- [Product feedback and iteration checklist](docs/product-feedback-checklist.md)
 - [Launch poster](#launch-poster)
 - [Product preview](#product-preview)
 - [Downloads](#downloads)
@@ -177,7 +213,7 @@ A daily highlight is a sorting aid, not an automatic decision. Conversation brow
 
 The workbench puts pending candidates, event threads, topics, and analysis metrics in one view. Each candidate should include a source, time, rule or analysis reason, and evidence link so that the user can see why it appeared and decide what to do next.
 
-Statuses such as pending and confirmed describe local organization only. They do not mean that anything was sent to a WeChat contact. In the current read-only mode, `/api/send-text` always returns 403. Preview, retry, and analysis endpoints are also protected by health checks and the read-only guard.
+Statuses such as pending and confirmed describe local organization only. They do not mean that anything was sent to a WeChat contact. LiteChat’s product boundary is permanently read-only; previews and analysis are for local organization or user-configured external analysis and never create a WeChat send task.
 
 ### 6. Rules and AI
 
@@ -362,16 +398,13 @@ GET  /api/insights?start=YYYY-MM-DD&end=YYYY-MM-DD
 GET  /api/chats?start=YYYY-MM-DD&end=YYYY-MM-DD
 GET  /api/sync-status
 GET  /api/ai-status
-POST /api/auto-reply       {"enabled": false}
 POST /api/preview          {"content": "..."}
 POST /api/sync             {"limit": 100}
 POST /api/sync-range       {"start":"YYYY-MM-DD","end":"YYYY-MM-DD","scope":"all"}
 POST /api/ai-analysis      {"start":"YYYY-MM-DD","end":"YYYY-MM-DD","limit":120,"confirm":true}
-POST /api/retry            {"task_id": 1}
-POST /api/send-text        {"content": "...", "confirm": true}
 ```
 
-The service binds only to `127.0.0.1` and never returns API keys. In read-only mode, `/api/send-text` always returns 403. `/api/preview` does not create a task, and historical sync does not create reply tasks.
+The service binds only to `127.0.0.1` and never returns API keys. The supported product mode has no auto-reply, send-retry, or `/api/send-text`; `/api/preview` creates no WeChat send task and history sync creates no reply task.
 
 ## Desktop app
 
@@ -462,24 +495,21 @@ Then manually confirm AI analysis in the workspace. The service sends limited fi
 
 ## API and Codex plugin
 
-The plugin directory is [`plugins/wechat-bridge`](plugins/wechat-bridge). It provides:
+The plugin directory is [`plugins/wechat-bridge`](plugins/wechat-bridge). Its user-facing scope is read-only status, message queries, and analysis previews:
 
 - `wechat.status`
 - `wechat.recent_messages`
-- `wechat.enable_auto_reply`
-- `wechat.disable_auto_reply`
 - `wechat.reply_preview`
-- `wechat.retry_message`
-- `wechat.send_text`
 
-The plugin remains subject to server dry-run, health checks, and target guards. A tool name does not mean that automatic sending is open in this release.
+The plugin does not send WeChat messages or create automatic-reply tasks. Any historical send adapters still present in the repository are not product capabilities, user promises, or supported behavior.
 
 ## Data and privacy
 
 - `data/` stores the local database, sync state, and QA browser profile and is fully ignored by Git;
 - `tmp/`, `output/`, and `wechatauto_logs/` store local logs, screenshots, PDFs, and package artifacts and are not committed;
 - the repository contains no WeChat database, chat history, cookies, browser login data, API keys, or personal configuration;
-- AI analysis sends limited candidate text to the configured AI provider only after manual confirmation;
+- AI analysis sends limited, redacted-but-still-potentially-personal candidate text and summaries to the configured AI provider only after manual confirmation;
+- when no local transcription exists, enabling Doubao ASR sends the selected WeChat voice audio to Doubao;
 - regular intake, history sync, rule analysis, and the desktop app access local services only;
 - see [`SECURITY.md`](SECURITY.md) for reporting security issues.
 
@@ -515,7 +545,7 @@ Install development dependencies and run the tests:
 .\.venv\Scripts\python.exe -m pip check
 ```
 
-The test suite covers rules and time zones, missing AI configuration, message deduplication, task recovery, cross-shard database adapters, history sync, explainable analysis, the read-only send guard, console APIs, media, and speech pipelines.
+The test suite covers rules and time zones, missing AI configuration, message deduplication, task recovery, cross-shard database adapters, history sync, explainable analysis, read-only send rejection, console APIs, media, and speech pipelines.
 
 Before committing, check that:
 
@@ -528,7 +558,8 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full change workflow.
 
 ## Current boundaries
 
-- the main runtime path is receive and analysis, not unattended automatic replies;
+- from v0.1.4 onward, LiteChat is permanently read-only: the main runtime path is receive, sync, analysis, and evidence linking, with no automatic replies, manual sending, or future sending plan;
+- read-only / dry-run is a product boundary, but cannot eliminate platform-control, account-ban, or compliance risk from reading internal WeChat data;
 - the Hook DLL match for WeChat `4.1.12.26` has not been verified in this project; public Hook targets for other versions must not be treated as compatible;
 - the project does not download DLL files, inject WeChat, or replace files in the WeChat installation directory;
 - `wxauto4` remains a fallback adapter, and its availability depends on the local WeChat window and dependency versions;

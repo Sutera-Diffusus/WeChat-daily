@@ -30,17 +30,18 @@
       display: { font_size: "normal", density: "compact", report_theme: "auto" },
       refresh: { enabled: true, interval_ms: 8000 },
       analysis: { auto_enabled: true, interval_ms: 600000, message_threshold: 20 },
+      shadow_analysis_enabled: false,
       media: { cache_dir: "" },
       ai: { base_url: "", model: "gpt-5.2", api_key_configured: false },
       email: { host: "", port: 465, security: "ssl", username: "", sender: "", password_configured: false },
       voice: { enabled: false, provider: "doubao_asr_v2", app_id: "", resource_id: "volc.seedasr.auc", single_duration_threshold_seconds: 20, chat_cumulative_threshold_seconds: 60, low_confidence_threshold: 0.75 },
-      profile: { roles: [], projects: [], organizations: [], key_contacts: [], topics: [], suggestions: [] },
+      profile: { self_name: "", roles: [], projects: [], organizations: [], key_contacts: [], topics: [], suggestions: [] },
     },
-    insights: null, messages: [], chats: [], contacts: [], tasks: [],
+    insights: null, messages: [], chats: [], contacts: [], tasks: [], factChecks: [],
     chatPayload: null, contactPayload: null, taskPayload: null,
     selectedChatId: null, paused: false, loading: false, initialized: false, rangeTransition: false,
     pendingSnapshot: null, pendingNewCount: 0, pollTimer: null,
-    aiResult: null, focusMessageId: null, dataSignature: "", lastAiRun: 0, lastAiMessageCount: 0, aiRunning: false, progressTimer: null, aiProgressTimer: null, aiStatusHideTimer: null, unformedVisibleCount: 0,
+    aiResult: null, shadowReview: { runId: "", envelope: null, loading: false }, focusMessageId: null, dataSignature: "", lastAiRun: 0, lastAiMessageCount: 0, aiRunning: false, progressTimer: null, aiProgressTimer: null, aiStatusHideTimer: null, unformedVisibleCount: 0,
   };
 
   function escapeHtml(value) {
@@ -364,12 +365,14 @@
     setChecked("#analysis-auto-setting", state.settings.analysis.auto_enabled !== false);
     setValue("#analysis-interval-setting", analysisIntervalMs());
     setValue("#analysis-threshold-setting", state.settings.analysis.message_threshold == null ? 20 : state.settings.analysis.message_threshold);
+    setChecked("#shadow-analysis-enabled-setting", state.settings.shadow_analysis_enabled === true);
     setValue("#media-cache-setting", state.settings.media.cache_dir || "");
     setChecked("#voice-enabled-setting", state.settings.voice.enabled === true);
     setValue("#voice-app-id-setting", state.settings.voice.app_id || "");
     setValue("#voice-single-threshold-setting", state.settings.voice.single_duration_threshold_seconds == null ? 20 : state.settings.voice.single_duration_threshold_seconds);
     setValue("#voice-cumulative-threshold-setting", state.settings.voice.chat_cumulative_threshold_seconds == null ? 60 : state.settings.voice.chat_cumulative_threshold_seconds);
     if ($("#voice-setting-note")) $("#voice-setting-note").textContent = state.settings.voice.enabled ? "已启用" : "未启用";
+    setValue("#profile-self-name-setting", state.settings.profile.self_name || "");
     setValue("#profile-roles-setting", listSetting(state.settings.profile.roles));
     setValue("#profile-projects-setting", listSetting(state.settings.profile.projects));
     setValue("#profile-organizations-setting", listSetting(state.settings.profile.organizations));
@@ -431,9 +434,9 @@
     const emailPassword = String(value("#email-password-setting")).trim();
     const email = { host: value("#email-host-setting"), port: Number(value("#email-port-setting")), security: value("#email-security-setting"), username: value("#email-username-setting"), sender: value("#email-sender-setting"), clear_password: Boolean($("#email-clear-password-setting") && $("#email-clear-password-setting").checked) };
     if (emailPassword) email.password = emailPassword;
-    const profile = { roles: parseListSetting(value("#profile-roles-setting")), projects: parseListSetting(value("#profile-projects-setting")), organizations: parseListSetting(value("#profile-organizations-setting")), key_contacts: parseListSetting(value("#profile-contacts-setting")), topics: parseListSetting(value("#profile-topics-setting")) };
+    const profile = { self_name: String(value("#profile-self-name-setting")).trim(), roles: parseListSetting(value("#profile-roles-setting")), projects: parseListSetting(value("#profile-projects-setting")), organizations: parseListSetting(value("#profile-organizations-setting")), key_contacts: parseListSetting(value("#profile-contacts-setting")), topics: parseListSetting(value("#profile-topics-setting")) };
     const analysis = { auto_enabled: Boolean($("#analysis-auto-setting") && $("#analysis-auto-setting").checked), interval_ms: Number(value("#analysis-interval-setting")), message_threshold: Number(value("#analysis-threshold-setting")) };
-    const payload = { display: { font_size: value("#font-size-setting"), density: value("#density-setting"), report_theme: value("#report-theme-setting") }, refresh: { enabled: Boolean($("#auto-refresh-setting") && $("#auto-refresh-setting").checked), interval_ms: Number(value("#refresh-interval-setting")) }, analysis, media, ai, voice, profile, email };
+    const payload = { display: { font_size: value("#font-size-setting"), density: value("#density-setting"), report_theme: value("#report-theme-setting") }, refresh: { enabled: Boolean($("#auto-refresh-setting") && $("#auto-refresh-setting").checked), interval_ms: Number(value("#refresh-interval-setting")) }, analysis, shadow_analysis_enabled: Boolean($("#shadow-analysis-enabled-setting") && $("#shadow-analysis-enabled-setting").checked), media, ai, voice, profile, email };
     button.disabled = true; button.textContent = "保存中…";
     try {
       const result = await request("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
@@ -580,7 +583,7 @@
 
   function fallbackInsights() {
     const inbound = state.messages.filter((item) => item.is_self !== true).length;
-    return { window: { start_date: state.start, end_date: state.end, timezone: BEIJING_TZ }, narrative: "", summary: { messages: state.messages.length, inbound, self: state.messages.length - inbound, chats: new Set(state.messages.map((item) => item.chat_id)).size, events: 0, actions: 0, high_value: 0, unformed_dynamics: 0 }, quality: { analysis_coverage: 0 }, highlights: [], actions: [], events: [], primary_insights: [], topic_briefs: [], unformed_dynamics: [], topics: [], top_chats: [], hourly: [], freshness: { source: "本地消息库" } };
+    return { window: { start_date: state.start, end_date: state.end, timezone: BEIJING_TZ }, narrative: "", summary: { messages: state.messages.length, inbound, self: state.messages.length - inbound, chats: new Set(state.messages.map((item) => item.chat_id)).size, events: 0, actions: 0, high_value: 0, unformed_dynamics: 0 }, quality: { analysis_coverage: 0 }, highlights: [], actions: [], events: [], primary_insights: [], topic_briefs: [], unformed_dynamics: [], fact_checks: [], topics: [], top_chats: [], hourly: [], freshness: { source: "本地消息库" } };
   }
 
   function normalizeInsights(value) {
@@ -715,7 +718,97 @@
     updateHeader();
     if (state.view === "feed") renderFeed();
     else if (state.view === "chats") renderChats();
-    else if (state.view === "workbench") { renderTasks(); renderAnalysis(); }
+    else if (state.view === "workbench") { renderTasks(); renderAnalysis(); refreshShadowRunOptions(); }
+  }
+
+  function aiResultAccepted(value) {
+    if (!value || value.llm_accepted !== true || value.provider_status !== "succeeded") return false;
+    const source = String(value.source || "").trim().toLowerCase();
+    // Keep the acceptance gate explicit for legacy mixed/fallback envelopes;
+    // a descriptive source must never override the provider/acceptance flags.
+    return source !== "rules_fallback" && source !== "local_rules_fallback" && source !== "ai_assisted_with_local_fallback";
+  }
+
+  function shadowReviewEnabled() {
+    return state.settings && state.settings.shadow_analysis_enabled === true;
+  }
+
+  function shadowDisabledEnvelope(reason) {
+    return {
+      ok: true,
+      analysis_run_id: "shadow-disabled",
+      source: "shadow_disabled",
+      provider_status: "disabled",
+      llm_accepted: false,
+      fallback_reason: reason || "shadow_analysis_disabled",
+    };
+  }
+
+  function renderShadowReview(value) {
+    const status = $("#shadow-review-status");
+    const result = $("#shadow-review-result");
+    if (!status || !result) return;
+    const envelope = value || shadowDisabledEnvelope();
+    const accepted = envelope.llm_accepted === true && envelope.provider_status === "succeeded";
+    const provider = String(envelope.provider_status || "unknown");
+    const source = String(envelope.source || envelope.source_marker || "unknown");
+    const reason = envelope.fallback_reason ? " · " + String(envelope.fallback_reason) : "";
+    status.textContent = (accepted ? "可审阅模型结果" : "不可接受的 shadow 结果") + " · " + provider + " · " + source + reason;
+    status.className = "shadow-review-status" + (accepted ? " is-accepted" : " is-blocked");
+    const threads = Array.isArray(envelope.threads) ? envelope.threads.length : 0;
+    const candidates = Array.isArray(envelope.event_candidates) ? envelope.event_candidates.length : 0;
+    result.hidden = false;
+    result.textContent = envelope.ok === false
+      ? "未找到指定 analysis_run_id；不会自动回退到最新 run。"
+      : "analysis_run_id: " + String(envelope.analysis_run_id || "—") + " · threads: " + threads + " · event candidates: " + candidates;
+  }
+
+  async function refreshShadowRunOptions() {
+    const selector = $("#shadow-analysis-run-selector");
+    if (!selector || !shadowReviewEnabled() || selector.dataset.loading === "true") {
+      if (!shadowReviewEnabled()) renderShadowReview(shadowDisabledEnvelope());
+      return;
+    }
+    selector.dataset.loading = "true";
+    try {
+      const value = await request("/api/shadow-analysis");
+      const ids = Array.isArray(value && value.available_run_ids) ? value.available_run_ids : [];
+      const selected = state.shadowReview.runId || selector.value;
+      selector.innerHTML = '<option value="">选择 analysis_run_id</option>' + ids.map((id) => '<option value="' + escapeHtml(id) + '">' + escapeHtml(id) + "</option>").join("");
+      if (selected && ids.includes(selected)) selector.value = selected;
+      renderShadowReview(value);
+    } catch (error) {
+      renderShadowReview({ ok: false, analysis_run_id: "shadow-index", source: "shadow_analysis", provider_status: "failed", llm_accepted: false, fallback_reason: error.message });
+    } finally {
+      selector.dataset.loading = "false";
+    }
+  }
+
+  async function loadShadowRun() {
+    const selector = $("#shadow-analysis-run-selector");
+    if (!selector) return;
+    if (!shadowReviewEnabled()) {
+      renderShadowReview(shadowDisabledEnvelope());
+      return;
+    }
+    const analysisRunId = String(selector.value || "").trim();
+    if (!analysisRunId) {
+      renderShadowReview({ ok: false, analysis_run_id: "shadow-index", source: "shadow_analysis", provider_status: "failed", llm_accepted: false, fallback_reason: "analysis_run_id_required" });
+      return;
+    }
+    state.shadowReview.runId = analysisRunId;
+    state.shadowReview.loading = true;
+    renderShadowReview({ ok: true, analysis_run_id: analysisRunId, source: "shadow_loading", provider_status: "configured", llm_accepted: false, fallback_reason: "loading" });
+    try {
+      const value = await request("/api/shadow-analysis?analysis_run_id=" + encodeURIComponent(analysisRunId));
+      state.shadowReview.envelope = value;
+      renderShadowReview(value);
+    } catch (error) {
+      state.shadowReview.envelope = { ok: false, analysis_run_id: analysisRunId, source: "shadow_analysis", provider_status: "failed", llm_accepted: false, fallback_reason: error.message };
+      renderShadowReview(state.shadowReview.envelope);
+    } finally {
+      state.shadowReview.loading = false;
+    }
   }
 
   function eventKey(event) {
@@ -768,15 +861,22 @@
   function sameTopic(left, right) {
     const leftIds = new Set(evidenceFor(left).map((item) => String(item.message_id || "")).filter(Boolean));
     if (evidenceFor(right).some((item) => leftIds.has(String(item.message_id || "")))) return true;
+    const leftLabels = new Set(stringList(left.tags).concat(stringList(left.keywords)).filter((value) => value && !/^(?:风险|问题|讨论|主题|事件|进展|知识|资源|AI|模型|平台|账号|成本|合规)$/i.test(value)));
+    const rightLabels = new Set(stringList(right.tags).concat(stringList(right.keywords)).filter((value) => value && !/^(?:风险|问题|讨论|主题|事件|进展|知识|资源|AI|模型|平台|账号|成本|合规)$/i.test(value)));
+    if (Array.from(leftLabels).some((value) => rightLabels.has(value))) return true;
     const a = topicTokens(left); const b = topicTokens(right);
+    const weak = new Set(["账号", "账户", "风控", "风险", "平台", "微信", "企业微信", "合规", "封号", "封禁", "成本", "价格", "费用", "模型", "工具", "讨论", "问题", "话题", "情况", "用户", "群聊", "中转", "额度"]);
     let chineseMatches = 0;
+    let strongLatinMatch = false;
     for (const token of a) {
       if (!b.has(token)) continue;
-      if (/^[a-z0-9]/.test(token)) return true;
+      if (/^[a-z0-9]/.test(token) && !weak.has(token)) strongLatinMatch = true;
+      if (/^[a-z0-9]/.test(token)) continue;
+      if (weak.has(token)) continue;
       chineseMatches += 1;
-      if (chineseMatches >= 2) return true;
+      if (chineseMatches >= 3) return true;
     }
-    return false;
+    return strongLatinMatch;
   }
 
   function collectEvents(insights) {
@@ -791,9 +891,10 @@
     if (!sources.length) (insights.events || []).forEach((event) => sources.push(event));
     const aiFindings = state.aiResult && state.aiResult.analysis && state.aiResult.analysis.findings || [];
     aiFindings.forEach((finding, index) => {
-      if (!state.aiResult || state.aiResult.source !== "ai_assisted") return;
+      if (!aiResultAccepted(state.aiResult)) return;
       const rawEvidence = Array.isArray(finding.evidence) ? finding.evidence : [];
-      if (!finding.why_it_matters || !rawEvidence.length) return;
+      const quoteOnly = finding.presentation_mode === "recovered_quote_card";
+      if ((!quoteOnly && !finding.why_it_matters) || !rawEvidence.length) return;
       const categoryWeight = ({ risk: 10, event: 8, progress: 7, knowledge: 5, theme: 4, resource: 2, question: 1 })[String(finding.category || "").toLowerCase()] || 3;
       const draftedPriority = 48 + Math.min(15, rawEvidence.length * 3) + categoryWeight + (String(finding.narrative || "").length >= 150 ? 4 : 0);
       const effectiveImportance = Number(finding.importance || 0) < 50 ? draftedPriority : Number(finding.importance || 0);
@@ -803,7 +904,12 @@
       const participantIds = new Set(evidence.map((item) => item.sender_name).filter(Boolean));
       const personal = evidence.some((item) => { const source = messageById(item.message_id); return source && !source.is_group; });
       const groupDiscussion = !personal && participantIds.size >= 2;
-       sources.push({ id: "ai:" + index + ":" + (finding.title || "finding"), title: finding.title, summary: finding.summary, narrative: finding.narrative || finding.summary, what_changed: finding.what_changed, why_it_matters: finding.why_it_matters, uncertainty: finding.uncertainty, next_step: finding.next_step, core_conclusion: finding.core_conclusion || finding.why_it_matters, importance: effectiveImportance, confidence: finding.confidence, status: "confirmed", lane: personal ? "for_me" : (chatIds.size >= 2 || groupDiscussion ? "trending" : "pending"), tags: stringList(finding.keywords).concat(stringList([finding.category, finding.value_type])), evidence, is_ai_brief: true });
+       const claimType = String(finding.claim_type || "reported_claim");
+       const claimUnverified = claimType !== "externally_verified";
+       const claimTags = stringList(finding.keywords).concat(stringList([finding.category, finding.value_type]));
+       if (finding.claim_label) claimTags.push(String(finding.claim_label));
+       const quoteSummary = quoteOnly ? evidence.map((item) => (item.sender_name ? item.sender_name + "：" : "") + "“" + String(item.content || item.quote || "") + "”").join("；") : finding.summary;
+       sources.push({ id: "ai:" + index + ":" + (finding.title || "finding"), title: finding.title, summary: quoteSummary, narrative: quoteOnly ? quoteSummary : (finding.narrative || finding.summary), what_changed: quoteOnly ? undefined : finding.what_changed, why_it_matters: quoteOnly ? undefined : finding.why_it_matters, uncertainty: quoteOnly ? undefined : finding.uncertainty, next_step: quoteOnly ? undefined : finding.next_step, core_conclusion: quoteOnly ? undefined : (finding.core_conclusion || finding.why_it_matters), claim_type: claimType, claim_status: finding.claim_status || "unverified_chat", claim_label: finding.claim_label || "聊天事实陈述", claim_boundary: finding.claim_boundary || "聊天证据尚未联网核验。", importance: effectiveImportance, confidence: finding.confidence, status: claimUnverified ? "pending" : "confirmed", lane: personal ? "for_me" : (chatIds.size >= 2 || groupDiscussion ? "trending" : "pending"), tags: claimTags, evidence, participants: Array.isArray(finding.participants) ? finding.participants : [], speakers: Array.isArray(finding.speakers) ? finding.speakers : [], is_ai_brief: true });
     });
     const map = new Map();
     sources.forEach((event) => {
@@ -892,6 +998,65 @@
     return '<article class="evidence-row"' + target + '><div class="evidence-avatar">' + escapeHtml(avatarText(item.sender_name)) + '</div><div class="evidence-main"><div class="evidence-top"><strong>' + escapeHtml(item.sender_name) + '</strong><span>' + escapeHtml(item.chat_name) + '</span><time>' + escapeHtml(formatTime(item.timestamp, true)) + '</time></div><p class="evidence-quote">' + escapeHtml(item.quote) + "</p></div></article>";
   }
 
+  function detailEvidenceFor(item) {
+    const detail = item && item.detail && typeof item.detail === "object" ? item.detail : {};
+    const raw = Array.isArray(detail.timeline) ? detail.timeline : (Array.isArray(item && item.detail_evidence) ? item.detail_evidence : []);
+    return raw.filter((entry) => entry && (entry.quote || entry.content)).map((entry) => Object.assign({}, entry, { quote: entry.quote || entry.content }));
+  }
+
+  function detailListHtml(values, className) {
+    const list = stringList(values).filter(Boolean);
+    return list.length ? '<ul class="' + className + '">' + list.map((value) => '<li>' + escapeHtml(value) + '</li>').join("") + '</ul>' : "";
+  }
+
+  function topicAttributionsFor(item) {
+    const detail = item && item.detail && typeof item.detail === "object" ? item.detail : {};
+    const raw = Array.isArray(item && item.attributions) ? item.attributions : (Array.isArray(detail.attributions) ? detail.attributions : []);
+    return raw.filter((entry) => entry && (entry.quote || entry.content)).map((entry) => Object.assign({}, entry, { quote: entry.quote || entry.content }));
+  }
+
+  function topicSpeakerHtml(item) {
+    const detail = item && item.detail && typeof item.detail === "object" ? item.detail : {};
+    const participants = stringList(item && (item.participants || item.sender_names) || detail.participants || detail.sender_names).filter(Boolean);
+    const attributions = topicAttributionsFor(item);
+    const people = participants.length ? '<div class="topic-detail-speakers"><span>发言人</span>' + participants.slice(0, 12).map((value) => '<b>' + escapeHtml(value) + '</b>').join("") + '</div>' : "";
+    const statements = attributions.slice(0, 4).map((entry) => {
+      const sender = String(entry.sender_name || "待识别成员");
+      const chat = String(entry.chat_name || "");
+      return '<li><strong>' + escapeHtml(sender) + '</strong>' + (chat ? '<small>' + escapeHtml(chat) + '</small>' : '') + '<span>' + escapeHtml(entry.quote) + '</span></li>';
+    }).join("");
+    const statementList = statements ? '<ul class="topic-detail-statements">' + statements + '</ul>' : "";
+    return people + statementList;
+  }
+
+  function topicFactCheckHtml(item) {
+    const check = item && item.fact_check && typeof item.fact_check === "object" ? item.fact_check : null;
+    if (!check) return '<button class="fact-check-button" type="button" data-fact-check-topic="' + escapeHtml(item.topic || "") + '">联网核实</button>';
+    const claims = Array.isArray(check.claims) ? check.claims : [];
+    const claimHtml = claims.slice(0, 4).map((claim) => {
+      const sources = (Array.isArray(claim.sources) ? claim.sources : []).slice(0, 3).map((source) => source && source.url ? '<a href="' + escapeHtml(source.url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(source.domain || source.title || "来源") + '</a>' : "").join(" · ");
+      return '<li><b>' + escapeHtml(claim.status_label || "待核实") + '</b><span>' + escapeHtml(claim.claim || "") + '</span>' + (sources ? '<small>' + sources + '</small>' : "") + '</li>';
+    }).join("");
+    return '<div class="topic-fact-check"><div class="topic-fact-check-head"><b>联网核实</b><span>' + escapeHtml(claims.length ? (claims.length + " 条候选") : "未抽出可核验事实") + '</span><button class="fact-check-refresh" type="button" data-fact-check-topic="' + escapeHtml(item.topic || "") + '">重新核实</button></div>' + (claimHtml ? '<ul>' + claimHtml + '</ul>' : '<p>当前主题主要是观点、问题或私人经历，没有直接发送搜索请求。</p>') + '</div>';
+  }
+
+  function topicDetailHtml(item) {
+    const detail = item && item.detail && typeof item.detail === "object" ? item.detail : {};
+    const entities = stringList(item && item.entities || detail.entities);
+    const points = stringList(item && item.detail_points || detail.points);
+    const evidence = detailEvidenceFor(item);
+    const sections = [
+      entities.length ? '<div class="topic-detail-entities"><span>涉及对象</span>' + entities.map((value) => '<b>' + escapeHtml(value) + '</b>').join("") + '</div>' : "",
+      topicSpeakerHtml(item),
+      detailListHtml(points, "topic-detail-points"),
+    ].filter(Boolean).join("");
+    const totalEvidence = Number(item && item.evidence_count || detail.source_message_count || evidence.length);
+    const evidenceLabel = totalEvidence > evidence.length ? '展开 ' + formatNumber(evidence.length) + ' 条证据（共 ' + formatNumber(totalEvidence) + ' 条）' : '展开 ' + formatNumber(evidence.length) + ' 条证据';
+    const evidenceDetails = evidence.length ? '<details class="topic-detail-evidence"><summary>' + evidenceLabel + '</summary><div class="event-evidence">' + evidence.map(evidenceHtml).join("") + '</div></details>' : "";
+    const factCheck = topicFactCheckHtml(item);
+    return sections || evidenceDetails || factCheck ? '<div class="topic-detail">' + sections + evidenceDetails + factCheck + '</div>' : "";
+  }
+
   function editorialTitle(event) {
     const value = String(event && event.title || "").replace(/\s+/g, "").trim();
     const vague = /^(?:相关讨论|相关话题|某某话题|话题持续升温|引发关注|相关内容|讨论引关注|最新消息|今日动态|事件候选)/;
@@ -949,9 +1114,18 @@
       .trim();
   }
 
+  function eventSpeakersHtml(event) {
+    const raw = (Array.isArray(event && event.speakers) && event.speakers.length ? event.speakers : (Array.isArray(event && event.participants) ? event.participants : []));
+    const speakers = raw.filter((item) => item && String(item.name || "").trim()).slice(0, 6);
+    if (!speakers.length) return "";
+    return '<div class="brief-speakers"><span>发言人</span><ul>' + speakers.map((item) => '<li><b>' + escapeHtml(item.name) + '</b>' + (item.role ? '<i>' + escapeHtml(item.role) + '</i>' : "") + (item.statement ? '<small>' + escapeHtml(item.statement) + '</small>' : "") + "</li>").join("") + "</ul></div>";
+  }
+
   function eventCardHtml(event, index) {
     const key = event._key || eventKey(event);
     const evidence = evidenceFor(event);
+    const evidenceIds = new Set(evidence.map((item) => String(item.message_id || "")).filter(Boolean));
+    const detailEvidence = detailEvidenceFor(event).filter((item) => !evidenceIds.has(String(item.message_id || "")));
     const tags = Array.from(new Set((event._lane === "personal" ? ["与你相关"] : []).concat(stringList(event.tags)))).slice(0, 4);
     const feedback = feedbackFor(key);
     const narrative = explicitGroupNames(editorialArticle(event), evidence);
@@ -959,10 +1133,12 @@
     const meta = [event.confidence != null ? "可信 " + event.confidence : "", evidence.length ? evidence.length + " 条证据" : "", event.related_chat_count ? event.related_chat_count + " 个会话" : ""].filter(Boolean).join(" · ");
     const menu = '<div class="event-menu" data-event-menu="' + escapeHtml(key) + '" hidden><button type="button" data-feedback="valuable" data-event-key="' + escapeHtml(key) + '" class="' + (feedback === "valuable" ? "selected" : "") + '">有价值</button><button type="button" data-feedback="not_valuable" data-event-key="' + escapeHtml(key) + '" class="' + (feedback === "not_valuable" ? "selected" : "") + '">无价值</button><button type="button" data-feedback="wrong_merge" data-event-key="' + escapeHtml(key) + '" class="' + (feedback === "wrong_merge" ? "selected" : "") + '">错误合并</button><button type="button" data-feedback="missing_context" data-event-key="' + escapeHtml(key) + '" class="' + (feedback === "missing_context" ? "selected" : "") + '">缺少上下文</button></div>';
     const evidenceDetails = evidence.length ? '<details class="brief-evidence"><summary>证据附录 · ' + evidence.length + ' 条</summary><div class="event-evidence">' + evidence.map(evidenceHtml).join("") + "</div></details>" : "";
+    const detailPoints = detailListHtml(event.detail_points || (event.detail && event.detail.points), "brief-detail-points");
+    const detailDetails = detailEvidence.length ? '<details class="brief-detail-evidence"><summary>展开细节证据 · ' + formatNumber(Number(event.detail && event.detail.source_message_count || detailEvidence.length)) + ' 条</summary><div class="event-evidence">' + detailEvidence.map(evidenceHtml).join("") + "</div></details>" : "";
     const conclusionHtml = conclusion ? ' <span class="brief-conclusion-inline">' + richActorText(conclusion, evidence, event) + '</span>' : "";
     const importance = Number(event.importance || 0);
     const weightClass = importance >= 80 ? " is-major" : (importance >= 60 ? " is-feature" : " is-brief");
-    return '<article class="event-card brief-card article-card' + (event.is_ai_brief ? " is-editorial" : " is-candidate") + weightClass + '" data-event-card="' + escapeHtml(key) + '"><div class="brief-card-top"><span class="brief-index">' + String(event._display_index || index + 1).padStart(2, "0") + '</span><span class="brief-meta">' + escapeHtml(meta) + '</span><button class="event-more" type="button" data-event-more="' + escapeHtml(key) + '" aria-label="评价简报">⋯</button>' + menu + '</div><h3>' + escapeHtml(editorialTitle(event)) + '</h3><p class="brief-narrative article-copy">' + richActorText(narrative, evidence, event) + conclusionHtml + '</p>' + (tags.length ? '<div class="event-tags">' + tags.map((tag) => '<span class="event-tag">' + escapeHtml(tag) + "</span>").join("") + "</div>" : "") + evidenceDetails + "</article>";
+    return '<article class="event-card brief-card article-card' + (event.is_ai_brief ? " is-editorial" : " is-candidate") + weightClass + '" data-event-card="' + escapeHtml(key) + '"><div class="brief-card-top"><span class="brief-index">' + String(event._display_index || index + 1).padStart(2, "0") + '</span><span class="brief-meta">' + escapeHtml(meta) + '</span><button class="event-more" type="button" data-event-more="' + escapeHtml(key) + '" aria-label="评价简报">⋯</button>' + menu + '</div><h3>' + escapeHtml(editorialTitle(event)) + '</h3><p class="brief-narrative article-copy">' + richActorText(narrative, evidence, event) + conclusionHtml + '</p>' + eventSpeakersHtml(event) + detailPoints + (tags.length ? '<div class="event-tags">' + tags.map((tag) => '<span class="event-tag">' + escapeHtml(tag) + "</span>").join("") + "</div>" : "") + evidenceDetails + detailDetails + "</article>";
   }
 
   function unformedDynamicHtml(item, index) {
@@ -1035,6 +1211,8 @@
       reportPage.dataset.theme = resolvedTheme;
     }
     if ($("#overview-layout-label")) $("#overview-layout-label").textContent = ({ census: "会话普查版", single: "单栏简讯版", split: "双栏要闻版", lead: "主线版", frontpage: "头版版" })[layout];
+    const aiMasthead = state.aiResult && state.aiResult.analysis && state.aiResult.analysis.masthead;
+    if ($("#seasonal-verse")) $("#seasonal-verse").textContent = aiMasthead && aiMasthead.subject ? "为 " + String(aiMasthead.subject) + " 整理" : EDITORIAL_MOTTO;
     $("#metric-messages").textContent = formatNumber(summary.messages == null ? state.messages.length : summary.messages);
     $("#metric-chats").textContent = formatNumber(summary.chats == null ? state.chats.length : summary.chats);
     $("#metric-high").textContent = formatNumber(events.filter((event) => event._lane !== "pending").length);
@@ -1164,7 +1342,7 @@
 
   function renderTopicBriefs(items) {
     const list = (items || []).filter((item) => item && item.topic && item.topic !== "其他讨论").slice(0, 10); const max = Math.max(1, ...list.map((item) => Number(item.message_count || 0)));
-    $("#topic-brief-list").innerHTML = list.length ? list.map((item) => { const width = Math.max(7, Math.round(Number(item.message_count || 0) / max * 100)); return '<article class="topic-brief-item"><div class="topic-brief-top"><strong>' + escapeHtml(item.topic) + '</strong><span>' + formatNumber(item.message_count || 0) + ' 条</span></div><div class="topic-brief-track"><i style="width:' + width + '%"></i></div><p>' + escapeHtml(item.summary || "") + '</p><div class="topic-brief-meta"><span>' + formatNumber(item.chat_count || 0) + ' 个会话</span><span>' + formatNumber(item.high_information_count || 0) + ' 条高信息量</span></div></article>'; }).join("") : '<div class="empty-state">暂无主题。</div>';
+    $("#topic-brief-list").innerHTML = list.length ? list.map((item) => { const width = Math.max(7, Math.round(Number(item.message_count || 0) / max * 100)); return '<article class="topic-brief-item"><div class="topic-brief-top"><strong>' + escapeHtml(item.topic) + '</strong><span>' + formatNumber(item.message_count || 0) + ' 条</span></div><div class="topic-brief-track"><i style="width:' + width + '%"></i></div><p>' + escapeHtml(item.summary || item.detail_summary || "") + '</p><div class="topic-brief-meta"><span>' + formatNumber(item.chat_count || 0) + ' 个会话</span><span>' + formatNumber(item.high_information_count || 0) + ' 条高信息量</span><span>' + formatNumber(item.evidence_count || 0) + ' 条证据</span></div>' + topicDetailHtml(item) + '</article>'; }).join("") : '<div class="empty-state">暂无主题。</div>';
   }
 
   function renderHourChart(items) {
@@ -1218,7 +1396,7 @@
       if (lastUpdated) lastUpdated.textContent = "刷新 " + new Date().toLocaleTimeString("zh-CN");
       const syncState = sync && sync.state || status.sync && status.sync.state;
       if (syncState === "running") showNotice("同步中", false); else if (syncState === "failed") showNotice("历史同步失败：" + ((sync && sync.error) || "未知错误"), true); else if (!state.pendingSnapshot) showNotice("");
-    } catch (error) { const unreachable = /failed to fetch|networkerror|network request|http 50[234]/i.test(String(error && error.message || error)); showNotice((unreachable ? "服务不可达：" : "界面处理失败：") + error.message, true); if (unreachable) { $("#service-state").innerHTML = '<span class="status-dot status-dot-warn"></span><span>服务不可达</span>'; $("#service-state").classList.add("is-warn"); } }
+    } catch (error) { const unreachable = /failed to fetch|fetch failed|networkerror|network request|http 50[234]/i.test(String(error && error.message || error)); showNotice((unreachable ? "服务不可达：" : "界面处理失败：") + error.message, true); if (unreachable) { $("#service-state").innerHTML = '<span class="status-dot status-dot-warn"></span><span>服务不可达</span>'; $("#service-state").classList.add("is-warn"); } }
     finally { state.loading = false; }
   }
 
@@ -1253,8 +1431,13 @@
 
   function renderAiResult(value) {
     const box = $("#ai-analysis-result"); const analysis = value.analysis || {}; const themes = Array.isArray(analysis.themes) ? analysis.themes : []; const findings = Array.isArray(analysis.findings) ? analysis.findings : [];
-    const findingHtml = findings.map((item) => { const evidence = (Array.isArray(item.evidence) ? item.evidence : []).slice(0, 4).map((source) => source && source.message_id ? '<button class="ai-evidence" data-open-message="' + escapeHtml(source.message_id) + '" type="button">' + escapeHtml(source.evidence_ref || source.sender_name || "证据") + "</button>" : "").join(""); return '<article class="ai-finding"><div class="ai-finding-top"><strong>' + escapeHtml(item.title || "分析事项") + '</strong><span>' + escapeHtml(String(item.category || "分析")) + " · " + escapeHtml(String(item.confidence == null ? "" : item.confidence)) + '</span></div><p class="ai-finding-summary">' + escapeHtml(item.summary || item.reason || "") + '</p>' + (item.what_changed ? '<div class="ai-finding-detail"><b>变化</b><span>' + escapeHtml(item.what_changed) + "</span></div>" : "") + (item.why_it_matters ? '<div class="ai-finding-detail"><b>意义</b><span>' + escapeHtml(item.why_it_matters) + "</span></div>" : "") + (item.next_step ? '<div class="ai-finding-next">下一步：' + escapeHtml(item.next_step) + "</div>" : "") + (evidence ? '<div class="ai-finding-evidence">' + evidence + "</div>" : "") + "</article>"; }).join("");
-    box.hidden = false; box.className = "ai-analysis-result"; box.innerHTML = '<div class="ai-result-head"><strong>' + escapeHtml(value.source === "ai_assisted_with_local_fallback" ? "AI + 本地结果" : "AI 辅助") + '</strong><span>' + escapeHtml(value.model || "模型") + " · " + formatNumber(value.candidate_count || 0) + " 条候选</span></div>" + (analysis.situation ? '<p class="ai-result-brief">' + escapeHtml(analysis.situation) + "</p>" : "") + (themes.length ? '<div class="ai-themes">' + themes.slice(0, 8).map((theme) => '<span class="ai-theme">' + escapeHtml(theme) + "</span>").join("") + "</div>" : "") + (findingHtml || '<p class="ai-result-brief">暂无新增判断。</p>');
+    const identity = analysis.user_identity && typeof analysis.user_identity === "object" ? analysis.user_identity : {}; const subject = String(identity.display_name || "").trim();
+    const leads = Array.isArray(analysis.leads) ? analysis.leads : [];
+    const renderLeadGroup = (label, items) => items.length ? '<div class="ai-leads-group"><div class="ai-leads-head">' + escapeHtml(label) + " · " + items.length + " 条</div>" + items.map((lead) => { const quotes = Array.isArray(lead.quotes) ? lead.quotes : []; if (!quotes.length) return '<div class="ai-lead"><span class="ai-lead-text">' + escapeHtml(lead.title || "") + "</span></div>"; return quotes.map((quote) => '<div class="ai-lead"><span class="ai-lead-who">' + escapeHtml(quote.sender_name || "待识别") + '</span><span class="ai-lead-text">' + escapeHtml(quote.content || lead.title || "") + '</span><span class="ai-lead-where">' + escapeHtml(quote.chat_name || "") + "</span></div>").join(""); }).join("") + "</div>" : "";
+    const recoveredLeads = leads.filter((lead) => lead && lead.recovered === true); const modelLeads = leads.filter((lead) => !lead || lead.recovered !== true);
+    const leadHtml = leads.length ? '<div class="ai-leads"><div class="ai-leads-head">线索速览 · ' + leads.length + " 条</div>" + renderLeadGroup("模型单句线索", modelLeads) + renderLeadGroup("本地证据补回", recoveredLeads) + "</div>" : "";
+    const findingHtml = findings.map((item) => { const rawEvidence = Array.isArray(item.evidence) ? item.evidence : []; const evidence = rawEvidence.slice(0, 4).map((source) => source && source.message_id ? '<button class="ai-evidence" data-open-message="' + escapeHtml(source.message_id) + '" type="button">' + escapeHtml(source.evidence_ref || source.sender_name || "证据") + "</button>" : "").join(""); const boundary = item.claim_boundary || item.uncertainty; const quoteOnly = item.presentation_mode === "recovered_quote_card"; const quoteBody = quoteOnly ? '<div class="ai-leads-group">' + rawEvidence.map((quote) => '<div class="ai-lead"><span class="ai-lead-who">' + escapeHtml(quote.sender_name || "待识别") + '</span><span class="ai-lead-text">' + escapeHtml(quote.content || "") + '</span><span class="ai-lead-where">' + escapeHtml(quote.chat_name || "") + "</span></div>").join("") + "</div>" : ""; return '<article class="ai-finding"><div class="ai-finding-top"><strong>' + escapeHtml(item.title || "分析事项") + '</strong><span>' + escapeHtml(String(item.claim_label || "待核实")) + " · " + escapeHtml(String(item.confidence == null ? "" : item.confidence)) + "</span></div>" + (quoteOnly ? quoteBody : '<p class="ai-finding-summary">' + escapeHtml(item.summary || item.reason || "") + "</p>" + eventSpeakersHtml(item) + (item.what_changed ? '<div class="ai-finding-detail"><b>变化</b><span>' + escapeHtml(item.what_changed) + "</span></div>" : "") + (item.why_it_matters ? '<div class="ai-finding-detail"><b>意义</b><span>' + escapeHtml(item.why_it_matters) + "</span></div>" : "")) + (boundary ? '<div class="ai-finding-boundary"><b>证据边界</b><span>' + escapeHtml(boundary) + "</span></div>" : "") + (!quoteOnly && item.next_step ? '<div class="ai-finding-next">下一步：' + escapeHtml(item.next_step) + "</div>" : "") + (evidence ? '<div class="ai-finding-evidence">' + evidence + "</div>" : "") + "</article>"; }).join("");
+    box.hidden = false; box.className = "ai-analysis-result"; box.innerHTML = '<div class="ai-result-head"><strong>' + escapeHtml(aiResultAccepted(value) ? "AI 辅助" : "本地保留") + '</strong><span>' + escapeHtml(value.model || "模型") + " · " + formatNumber(value.candidate_count || 0) + " 条候选</span>" + (subject ? '<span class="ai-result-subject">本期为 ' + escapeHtml(subject) + ' 整理</span>' : "") + "</div>" + (analysis.situation ? '<p class="ai-result-brief">' + escapeHtml(analysis.situation) + "</p>" : "") + (themes.length ? '<div class="ai-themes">' + themes.slice(0, 8).map((theme) => '<span class="ai-theme">' + escapeHtml(theme) + "</span>").join("") + "</div>" : "") + (findingHtml || '<p class="ai-result-brief">暂无新增判断。</p>') + leadHtml;
   }
 
   async function runAiAnalysis(silent) {
@@ -1266,6 +1449,36 @@
     try { if (!silent) updateOperation(null, "模型正在归纳主线", 36); updateAiTaskStatus(null, "模型正在归纳主线与跨会话联系", 42, "running"); const value = await request("/api/ai-analysis", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ start: state.start, end: state.end, limit: 120, confirm: true, force: !silent }), timeoutMs: 300000 }); state.aiResult = value; state.lastAiRun = Date.parse(value.generated_at || "") || Date.now(); state.lastAiMessageCount = state.messages.length; updateAiTaskStatus(null, "核对证据并重排日报版面", 92, "running"); if (!silent) updateOperation(null, "核对证据并编排版面", 91); renderAiResult(value); renderAiFreshness(value); renderOverview(); renderAnalysis(); finishAiTaskStatus("最新分析已写入当前日报", false); if (!silent) { showNotice("AI 分析已完成", false); await finishOperation("AI 简报已更新", false); } }
     catch (error) { $("#ai-analysis-result").hidden = false; $("#ai-analysis-result").className = "ai-analysis-result error"; $("#ai-analysis-result").textContent = error.message; showNotice("AI 分析未完成", true); finishAiTaskStatus(error.message, true); if (!silent) await finishOperation(error.message, true); }
     finally { state.aiRunning = false; const configured = Boolean(state.aiStatus && (state.aiStatus.configured || state.aiStatus.api_key_configured)); aiButtons().forEach((button) => { button.disabled = !configured; button.innerHTML = button.id === "ai-analysis-home-button" ? "<span>✦</span><b>AI 分析</b>" : "运行 AI 分析"; }); renderAiFreshness(); }
+  }
+
+  async function runFactCheck(button) {
+    const topic = String(button && button.dataset.factCheckTopic || "").trim();
+    if (!topic || button.disabled) return;
+    if (!window.confirm("联网核实只会发送公开对象和核验词，不会发送聊天原文、发言人或会话名。继续吗？")) return;
+    button.disabled = true;
+    const original = button.textContent;
+    button.textContent = "核实中…";
+    try {
+      const value = await request("/api/fact-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ start: state.start, end: state.end, topic, confirm: true, limit: 6 }),
+        timeoutMs: 30000,
+      });
+      const insights = state.insights || fallbackInsights();
+      const topicItem = (insights.topic_briefs || []).find((item) => String(item.topic || "") === topic);
+      if (topicItem) topicItem.fact_check = value;
+      insights.fact_checks = Array.isArray(insights.fact_checks) ? insights.fact_checks.filter((item) => String(item.topic || "") !== topic).concat([value]) : [value];
+      state.insights = insights;
+      renderOverview();
+      renderAnalysis();
+      showNotice("联网核实完成：结果已附到“" + topic + "”", false);
+    } catch (error) {
+      showNotice("联网核实失败：" + error.message, true);
+    } finally {
+      button.disabled = false;
+      button.textContent = original;
+    }
   }
 
   function maybeRunAiAnalysis(changed) {
@@ -1403,16 +1616,17 @@
   function bindEvents() {
     $$(".range-button").forEach((button) => button.addEventListener("click", () => switchReportRange(button)));
     [$("#range-start"), $("#range-end")].forEach((input) => input.addEventListener("change", () => { state.period = "custom"; state.start = $("#range-start").value; state.end = $("#range-end").value; state.aiResult = null; state.lastAiRun = 0; state.lastAiMessageCount = 0; $$(".range-button").forEach((item) => item.classList.remove("active")); renderRangeContext(); refresh({ showLoading: true, forceApply: true }); }));
-    $("#sync-button").addEventListener("click", syncRange); $("#refresh-now").addEventListener("click", refreshNow); $("#refresh-toggle-top").addEventListener("click", toggleRefresh); $("#sidebar-collapse").addEventListener("click", () => setSidebarHidden(true)); $("#sidebar-reveal").addEventListener("click", () => setSidebarHidden(false)); $("#quick-settings").addEventListener("click", openSettings); $("#settings-close").addEventListener("click", closeSettings); $("#settings-cancel").addEventListener("click", closeSettings); $("#settings-backdrop").addEventListener("click", closeSettings); $("#settings-form").addEventListener("submit", saveSettings); $("#media-lightbox-close").addEventListener("click", closeMedia); $("[data-close-media]").addEventListener("click", closeMedia); $("#report-export-button").addEventListener("click", openReportExport); $("#report-export-close").addEventListener("click", closeReportExport); $("[data-close-export]").addEventListener("click", closeReportExport); $("#report-download-html").addEventListener("click", (event) => downloadReport("html", event.currentTarget)); $("#report-download-pdf").addEventListener("click", (event) => downloadReport("pdf", event.currentTarget)); $("#report-email-send").addEventListener("click", emailReport); $("#unformed-more").addEventListener("click", () => { const batchSize = isCensusRange() ? 120 : 40; state.unformedVisibleCount = Math.max(batchSize, Number(state.unformedVisibleCount || 0)) + batchSize; const insights = state.insights || fallbackInsights(); renderUnformedDynamics(insights, collectEvents(insights)); });
+    $("#sync-button").addEventListener("click", syncRange); $("#refresh-now").addEventListener("click", refreshNow); $("#refresh-toggle-top").addEventListener("click", toggleRefresh); $("#sidebar-collapse").addEventListener("click", () => setSidebarHidden(true)); $("#sidebar-reveal").addEventListener("click", () => setSidebarHidden(false)); $("#quick-settings").addEventListener("click", openSettings); $("#settings-close").addEventListener("click", closeSettings); $("#settings-cancel").addEventListener("click", closeSettings); $("#settings-backdrop").addEventListener("click", closeSettings); $("#settings-form").addEventListener("submit", saveSettings); $("#media-lightbox-close").addEventListener("click", closeMedia); $("[data-close-media]").addEventListener("click", closeMedia); $("#report-export-button").addEventListener("click", openReportExport); $("#report-export-close").addEventListener("click", closeReportExport); $("[data-close-export]").addEventListener("click", closeReportExport); $("#report-download-html").addEventListener("click", (event) => downloadReport("html", event.currentTarget)); $("#report-download-pdf").addEventListener("click", (event) => downloadReport("pdf", event.currentTarget)); $("#report-email-send").addEventListener("click", emailReport); $("#shadow-analysis-load").addEventListener("click", loadShadowRun); $("#shadow-analysis-run-selector").addEventListener("change", (event) => { state.shadowReview.runId = event.target.value; }); $("#unformed-more").addEventListener("click", () => { const batchSize = isCensusRange() ? 120 : 40; state.unformedVisibleCount = Math.max(batchSize, Number(state.unformedVisibleCount || 0)) + batchSize; const insights = state.insights || fallbackInsights(); renderUnformedDynamics(insights, collectEvents(insights)); });
     $("#show-new-messages").addEventListener("click", () => { if (state.pendingSnapshot) applyDataSnapshot(state.pendingSnapshot); setView("feed"); window.setTimeout(() => $("#feed-list").scrollIntoView({ behavior: "smooth", block: "start" }), 30); });
     $("#feed-search").addEventListener("input", (event) => { state.feedSearch = event.target.value; state.feedVisibleCount = 140; renderFeed(); }); $("#feed-chat-filter").addEventListener("change", (event) => { state.feedChatId = event.target.value; state.feedVisibleCount = 140; renderFeed(); });
     $$('[data-feed-filter]').forEach((button) => button.addEventListener("click", () => { state.feedFilter = button.dataset.feedFilter; state.feedVisibleCount = 140; $$('[data-feed-filter]').forEach((item) => item.classList.toggle("active", item === button)); renderFeed(); })); $("#feed-more").addEventListener("click", () => { state.feedVisibleCount += 140; renderFeed(); });
     $("#chat-search").addEventListener("input", (event) => { state.chatSearch = event.target.value; renderChatList(); }); $("#contact-search").addEventListener("input", (event) => { state.contactSearch = event.target.value; renderContacts(); });
     $$('[data-contact-filter]').forEach((button) => button.addEventListener("click", () => { state.contactFilter = button.dataset.contactFilter; $$('[data-contact-filter]').forEach((item) => item.classList.toggle("active", item === button)); renderContacts(); })); $$('[data-task-filter]').forEach((button) => button.addEventListener("click", () => { state.taskFilter = button.dataset.taskFilter; $$('[data-task-filter]').forEach((item) => item.classList.toggle("active", item === button)); renderTasks(); })); aiButtons().forEach((button) => button.addEventListener("click", () => runAiAnalysis(false)));
     document.addEventListener("click", (event) => {
-      const nav = event.target.closest(".nav-item[data-view]"); if (nav) { event.preventDefault(); setView(nav.dataset.view); return; }
-      const preview = event.target.closest("[data-preview-media]"); if (preview) { event.stopPropagation(); openMedia(preview.dataset.previewMedia); return; }
-      const more = event.target.closest("[data-event-more]"); if (more) { event.stopPropagation(); const menu = $('[data-event-menu="' + more.dataset.eventMore.replace(/"/g, '\\"') + '"]'); closeEventMenus(); if (menu) menu.hidden = false; return; }
+       const nav = event.target.closest(".nav-item[data-view]"); if (nav) { event.preventDefault(); setView(nav.dataset.view); return; }
+       const preview = event.target.closest("[data-preview-media]"); if (preview) { event.stopPropagation(); openMedia(preview.dataset.previewMedia); return; }
+       const factCheck = event.target.closest("[data-fact-check-topic]"); if (factCheck) { event.stopPropagation(); runFactCheck(factCheck); return; }
+       const more = event.target.closest("[data-event-more]"); if (more) { event.stopPropagation(); const menu = $('[data-event-menu="' + more.dataset.eventMore.replace(/"/g, '\\"') + '"]'); closeEventMenus(); if (menu) menu.hidden = false; return; }
       const feedback = event.target.closest("[data-feedback]"); if (feedback) { event.stopPropagation(); closeEventMenus(); setFeedback(feedback.dataset.eventKey, feedback.dataset.feedback).then(() => showNotice("评价已记录", false)).catch((error) => showNotice("评价保存失败：" + error.message, true)); return; }
       const voice = event.target.closest("[data-voice-transcribe]"); if (voice) { event.stopPropagation(); transcribeVoice(voice); return; }
       const go = event.target.closest("[data-go-view]"); if (go) { setView(go.dataset.goView); return; }

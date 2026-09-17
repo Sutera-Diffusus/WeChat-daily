@@ -408,6 +408,17 @@ class WeChatAutoDbAdapter(WeChatAdapter):
 
         return self._db
 
+    @property
+    def self_display_name(self) -> str:
+        """Best-known local display name of the logged-in account.
+
+        The brief still labels the operator as ``我`` in message rows, but the
+        analysis and AI layers need to know who that subject actually is so
+        the report does not lose its main character.
+        """
+
+        return self._self_display_name
+
     def export_voice(self, chat_id: str, local_id: int, save_dir: str) -> Optional[str]:
         """Export one encrypted-database voice blob as a local SILK file."""
 
@@ -490,6 +501,7 @@ class WeChatAutoDbAdapter(WeChatAdapter):
         details = {
             "db_dir": str(getattr(self._db, "db_dir", self.db_dir or "")),
             "account": str(getattr(self._db, "account", self.account or "")),
+            "self_display_name": self._self_display_name,
             "keyed_database_count": len(getattr(self._db, "_keys", {}) or {}),
             "unkeyed_databases": unkeyed,
             "receive_mode": "local_db_listener",

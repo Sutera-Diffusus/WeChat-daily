@@ -2558,3 +2558,21 @@ body.sidebar-hidden .main-content { margin-left: 0 !important; }
   #analysis .analysis-grid,
   #analysis .analysis-visual-grid { grid-template-columns: 1fr; }
 }
+
+/* Attribution layer: every published brief names who said what. */
+.brief-speakers { margin: 10px 0 2px; padding: 8px 10px; border: 1px solid #d8d2c4; background: rgba(255, 255, 255, .55); }
+.brief-speakers > span { display: block; margin-bottom: 6px; color: var(--faint); font-size: 11px; font-weight: 900; letter-spacing: .08em; }
+.brief-speakers ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.brief-speakers li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+.brief-speakers b { font-size: 12px; font-weight: 900; }
+.brief-speakers i { padding: 1px 6px; border: 1px solid #171717; border-radius: 999px; font-size: 10px; font-style: normal; font-weight: 700; }
+.brief-speakers small { flex: 1 1 220px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.ai-result-subject { margin-left: auto; color: var(--faint); font-size: 11px; font-weight: 700; }
+.ai-finding .brief-speakers { background: transparent; }
+.ai-leads { margin-top: 10px; border-top: 1px dashed #b9b2a2; padding-top: 8px; }
+.ai-leads-head { margin-bottom: 6px; color: var(--faint); font-size: 11px; font-weight: 900; letter-spacing: .06em; }
+.ai-lead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; padding: 4px 0; border-bottom: 1px dotted #ddd5c3; }
+.ai-lead:last-child { border-bottom: 0; }
+.ai-lead-who { flex: 0 0 auto; font-size: 12px; font-weight: 900; }
+.ai-lead-text { flex: 1 1 260px; color: #26333a; font-size: 12px; }
+.ai-lead-where { color: var(--faint); font-size: 11px; }

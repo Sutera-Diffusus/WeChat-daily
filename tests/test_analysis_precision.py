@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from wechat_bridge.analysis import analyze_messages, build_ai_context
+from wechat_bridge.analysis import analyze_messages, build_ai_context, build_ai_dialogue_packets
 
 
 def _item(message_id, chat_id, content, minute, is_group=False):
@@ -142,3 +142,201 @@ def test_ai_context_can_analyze_substantive_messages_sent_by_me():
     assert len(candidates) == 1
     assert candidates[0]["sender_name"] == "我"
     assert candidates[0]["is_self"] is True
+
+
+def test_ai_context_backfills_high_density_chat_to_requested_limit():
+    messages = [
+        _item(
+            "dense-%02d" % index,
+            "高密度项目群",
+            "请在今天确认第 %d 个接口迁移方案和负责人。" % index,
+            index,
+            True,
+        )
+        for index in range(40)
+    ]
+
+    candidates = build_ai_context(messages, max_items=30)
+
+    assert len(candidates) == 30
+    assert {item["chat_name"] for item in candidates} == {"高密度项目群"}
+
+
+def test_ai_context_preserves_cross_chat_coverage_before_backfill():
+    messages = [
+        _item(
+            "busy-%02d" % index,
+            "高优先级项目群",
+            "请在今天确认第 %d 个发布故障的修复方案。" % index,
+            index,
+            True,
+        )
+        for index in range(20)
+    ]
+    messages.append(
+        _item(
+            "quiet-01",
+            "低频讨论群",
+            "我认为模型效果需要结合真实任务评测，不能只看演示结果。",
+            30,
+            True,
+        )
+    )
+
+    candidates = build_ai_context(messages, max_items=13)
+
+    assert len(candidates) == 13
+    assert "quiet-01" in {item["_source_message_id"] for item in candidates}
+    assert sum(item["chat_name"] == "高优先级项目群" for item in candidates) == 12
+
+
+def test_ai_context_backfill_keeps_priority_messages_within_total_budget():
+    messages = [
+        _item(
+            "priority-%02d" % index,
+            "单一项目群",
+            "请在今天确认第 %d 个接口发布方案和负责人。" % index,
+            index,
+            True,
+        )
+        for index in range(30)
+    ]
+    priority_ids = {"priority-%02d" % index for index in range(20)}
+
+    candidates = build_ai_context(
+        messages,
+        max_items=25,
+        priority_message_ids=priority_ids,
+    )
+
+    selected_ids = {item["_source_message_id"] for item in candidates}
+    assert len(candidates) == 25
+    assert priority_ids <= selected_ids
+
+
+def _ai_candidate(ref, chat, minute, content, domain_tags=()):
+    return {
+        "evidence_ref": ref,
+        "chat_name": chat,
+        "timestamp": (
+            datetime(2026, 8, 21, tzinfo=timezone.utc) + timedelta(minutes=minute)
+        ).isoformat(),
+        "content": content,
+        "domain_tags": list(domain_tags),
+    }
+
+
+def test_ai_dialogue_packets_never_cross_chat_boundaries():
+    candidates = [
+        _ai_candidate("m-001", "甲群", 0, "接口发布方案已经确认"),
+        _ai_candidate("m-002", "乙群", 1, "接口发布方案需要复核"),
+    ]
+
+    packets = build_ai_dialogue_packets(candidates)
+
+    assert len(packets) == 2
+    assert [{item["chat_name"] for item in packet["candidates"]} for packet in packets] == [
+        {"甲群"}, {"乙群"}
+    ]
+
+
+def test_ai_dialogue_packets_split_when_inactivity_gap_exceeds_limit():
+    candidates = [
+        _ai_candidate("m-001", "项目群", 0, "接口发布方案已经确认"),
+        _ai_candidate("m-002", "项目群", 46, "接口发布方案需要复核"),
+    ]
+
+    packets = build_ai_dialogue_packets(candidates, max_span_minutes=45)
+
+    assert [packet["evidence_refs"] for packet in packets] == [["m-001"], ["m-002"]]
+
+
+def test_ai_dialogue_packets_keep_long_but_continuous_conversation_together():
+    candidates = [
+        _ai_candidate("m-001", "项目群", 0, "接口发布方案已经确认"),
+        _ai_candidate("m-002", "项目群", 30, "接口发布方案需要复核"),
+        _ai_candidate("m-003", "项目群", 60, "接口发布方案补充了负责人"),
+    ]
+
+    packets = build_ai_dialogue_packets(candidates, max_span_minutes=45)
+
+    assert [packet["evidence_refs"] for packet in packets] == [["m-001", "m-002", "m-003"]]
+
+
+def test_ai_dialogue_packets_keep_close_domain_change_in_same_packet():
+    candidates = [
+        _ai_candidate("m-001", "技术群", 0, "Codex 额度重置", ("codex_service",)),
+        _ai_candidate("m-002", "技术群", 1, "微信账号被限制", ("wechat",)),
+    ]
+
+    packets = build_ai_dialogue_packets(candidates)
+
+    assert [packet["evidence_refs"] for packet in packets] == [["m-001", "m-002"]]
+
+
+def test_ai_dialogue_packets_keep_distant_domain_change_within_span():
+    candidates = [
+        _ai_candidate("m-001", "技术群", 0, "Codex 额度重置", ("codex_service",)),
+        _ai_candidate("m-002", "技术群", 11, "微信账号被限制", ("wechat",)),
+    ]
+
+    packets = build_ai_dialogue_packets(candidates)
+
+    assert [packet["evidence_refs"] for packet in packets] == [["m-001", "m-002"]]
+
+
+def test_ai_dialogue_packets_keep_close_topic_change_in_same_packet():
+    candidates = [
+        _ai_candidate("m-001", "技术群", 0, "接口发布方案已经确认"),
+        _ai_candidate("m-002", "技术群", 5, "模型评测结果已经公布"),
+    ]
+
+    packets = build_ai_dialogue_packets(candidates)
+
+    assert [packet["evidence_refs"] for packet in packets] == [["m-001", "m-002"]]
+
+
+def test_ai_dialogue_packets_keep_distant_topic_change_within_span():
+    candidates = [
+        _ai_candidate("m-001", "技术群", 0, "接口发布方案已经确认"),
+        _ai_candidate("m-002", "技术群", 11, "模型评测结果已经公布"),
+    ]
+
+    packets = build_ai_dialogue_packets(candidates)
+
+    assert [packet["evidence_refs"] for packet in packets] == [["m-001", "m-002"]]
+
+
+def test_ai_dialogue_packets_obey_hard_item_limit():
+    candidates = [
+        _ai_candidate("m-%03d" % index, "项目群", index, "接口发布方案第 %d 项" % index)
+        for index in range(1, 8)
+    ]
+
+    packets = build_ai_dialogue_packets(candidates, max_items=3)
+
+    assert [len(packet["candidates"]) for packet in packets] == [3, 3, 1]
+
+
+def test_ai_dialogue_packets_cover_every_candidate_exactly_once_and_keep_global_refs():
+    candidates = [
+        _ai_candidate("m-004", "乙群", 4, "模型评测结果需要复核"),
+        _ai_candidate("m-001", "甲群", 0, "接口发布方案已经确认"),
+        _ai_candidate("m-003", "甲群", 2, "接口发布方案等待复核"),
+        _ai_candidate("m-002", "甲群", 1, "接口发布方案补充了负责人"),
+    ]
+
+    packets = build_ai_dialogue_packets(candidates)
+    flattened = [
+        item["evidence_ref"]
+        for packet in packets
+        for item in packet["candidates"]
+    ]
+
+    assert sorted(flattened) == sorted(item["evidence_ref"] for item in candidates)
+    assert len(flattened) == len(set(flattened)) == len(candidates)
+    assert all(
+        packet["evidence_refs"] == [item["evidence_ref"] for item in packet["candidates"]]
+        for packet in packets
+    )
+    assert build_ai_dialogue_packets(candidates) == packets
