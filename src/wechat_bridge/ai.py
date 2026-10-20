@@ -459,13 +459,21 @@ class OpenAIAnalysisGenerator:
             for value in list(identity.get("roles") or [])[:6]
             if str(value).strip()
         )
+        identity_topics = "、".join(
+            str(value).strip()
+            for value in list(identity.get("topics") or [])[:8]
+            if str(value).strip()
+        )
+        brief_scope = str(identity.get("brief_scope") or "").strip()
         identity_note = str(identity.get("note") or "").strip()
         user_identity_text = (
-            "简报主体（用户本人）：%s%s。候选中 is_self=true、sender_alias 为“我”的消息都是用户本人发出的；"
+            "简报主体（用户本人）：%s%s%s%s。候选中 is_self=true、sender_alias 为“我”的消息都是用户本人发出的；"
             "is_group=false 的私聊是他人与用户本人的一对一对话，天然直接面向用户本人。%s"
             % (
                 identity_name,
                 ("（身份/角色：%s）" % identity_roles) if identity_roles else "",
+                ("（重点工具：%s）" % identity_topics) if identity_topics else "",
+                ("（正文范围：%s）" % brief_scope) if brief_scope else "",
                 identity_note or "整份简报以用户本人为主体视角撰写，相关性、重要性和下一步都围绕用户本人判断。",
             )
         )

@@ -89,6 +89,7 @@ _AI_MD5 = re.compile(r"(?<![0-9a-fA-F])[0-9a-fA-F]{32}(?![0-9a-fA-F])")
 _AI_WINDOWS_PATH = re.compile(r"(?<![\w])(?:[A-Za-z]:\\|\\\\)[^\r\n\s]+")
 _AI_EMAIL = re.compile(r"\b[^\s@]+@[^\s@]+\.[^\s@]+\b")
 _AI_PHONE = re.compile(r"(?<!\d)1\d{10}(?!\d)")
+_AI_API_KEY = re.compile(r"(?<![A-Za-z0-9])sk-[A-Za-z0-9_-]{16,}", re.IGNORECASE)
 _DOMAIN_SIGNAL = re.compile(
     r"(项目|需求|客户|会议|方案|合同|报价|付款|发票|交付|代码|系统|接口|服务|部署|版本|bug|故障|风险|平台|比赛|报名|申请|联系方式|研究|工作|接口|toolcall|api|agent|agentic|session|statusline|search|harness|模型|账号|数据|任务|截止|负责人)",
     re.IGNORECASE,
@@ -348,6 +349,7 @@ def _redact_ai_content(value: Any) -> str:
     """Remove common local identifiers and direct contact data before AI use."""
 
     text = str(value or "")
+    text = _AI_API_KEY.sub("[API 密钥]", text)
     text = _AI_WINDOWS_PATH.sub("[本地路径]", text)
     text = _AI_WX_IDENTIFIER.sub("[内部标识]", text)
     text = _AI_MD5.sub("[媒体索引]", text)
@@ -3969,10 +3971,21 @@ def _discussion_episodes(
     return episodes[:24]
 
 
+_AI_CONTEXT_SHORT_SIGNAL = re.compile(
+    r"(?:工作|任务|材料|文件|申请书).{0,16}(?:转交|移交|交给|转给)"
+    r"|(?:麻烦|请).{1,20}(?:做|处理|准备|确认)"
+    r"|(?:额度|配额|限额).{0,12}(?:缩减|用完|耗尽|下降|减少)"
+    r"|(?:额度|配额|限额).{0,12}(?:消耗|烧完|50%|一半)"
+    r"|(?:明天|后天).{0,16}(?:交|提交|截止)"
+    r"|(?:可以|能否|麻烦).{0,18}(?:发给我|转给我)"
+)
+
+
 def build_ai_context(
     messages: Iterable[Mapping[str, Any]],
     max_items: int = 120,
     priority_message_ids: Optional[Iterable[str]] = None,
+    profile: Optional[Mapping[str, Any]] = None,
 ) -> List[Dict[str, Any]]:
     """Prepare a small, redacted candidate set for optional AI analysis.
 
@@ -3984,6 +3997,22 @@ def build_ai_context(
 
     safe_limit = max(1, min(int(max_items), 200))
     priority_ids = {str(value) for value in (priority_message_ids or []) if str(value)}
+    user_name = str((profile or {}).get("self_name") or "").strip()
+    topic_tokens = {
+        token.casefold()
+        for topic in (profile or {}).get("topics") or ()
+        for token in re.findall(r"[A-Za-z]{3,}", str(topic))
+        if token.casefold() not in {"max", "flash", "the", "and"}
+    }
+    tool_risk = re.compile(
+        r"502|503|额度|配额|限额|token|故障|异常|不可用|用完|耗尽|降智|消耗|"
+        r"网络搞挂|断网|IP裸奔|IP暴露", re.I,
+    )
+    self_tool_failure = re.compile(
+        r"听不懂.{0,20}不改|(?:不|没)执行|无法完成|排查.{0,15}(?:没解决|未解决)|断网|网络搞挂",
+        re.I,
+    )
+    personal_action = re.compile(r"任务|工作|材料|申请书|道具|交接|转交|移交|转给|提交|截止|明天|后天|发给我|需要我|麻烦", re.I)
     source_items = [dict(raw) for raw in messages]
     _prepare_message_recognition(source_items, "Asia/Shanghai")
     context_windows = _build_context_windows(source_items)
@@ -3998,6 +4027,20 @@ def build_ai_context(
             context_windows.get(id(item), ()),
             assessment,
         )
+        short_context_signal = bool(_AI_CONTEXT_SHORT_SIGNAL.search(content))
+        personal_signal = bool(profile) and (
+            bool(user_name and ("@" + user_name in content or "＠" + user_name in content)
+                 and personal_action.search(content))
+            or bool(not item.get("is_group") and personal_action.search(content))
+        )
+        tracked_tool_mentioned = bool(
+            topic_tokens
+            and any(re.search(r"(?<![A-Za-z])" + re.escape(token) + r"(?![A-Za-z])", content, re.I) for token in topic_tokens)
+        )
+        tool_signal = tracked_tool_mentioned and bool(
+            tool_risk.search(content)
+            or (item.get("is_self") is True and self_tool_failure.search(content))
+        )
         if item.get("is_self") not in {True, False} or not score.get("eligible"):
             continue
         if recognition.get("analysis_role") in {"noise", "archive_only"} or _LOW_SIGNAL.match(content):
@@ -4006,6 +4049,9 @@ def build_ai_context(
             assessment["state"] in {"filtered_low_value", "low_information"}
             and information is None
             and item.get("_transcribed_voice") is not True
+            and not short_context_signal
+            and not personal_signal
+            and not tool_signal
         ):
             continue
         confidence = item.get("sender_name_confidence")
@@ -4050,6 +4096,8 @@ def build_ai_context(
             rule_signals.append("表达需核对")
         if information is not None:
             rule_signals.extend(information.get("signals") or [])
+        if short_context_signal:
+            rule_signals.append("需结合上下文核对")
         claim_profile = _claim_profile(content)
         if claim_profile.get("claim_label"):
             rule_signals.append(str(claim_profile["claim_label"]))
@@ -4075,9 +4123,10 @@ def build_ai_context(
                 ],
                 "context": safe_context,
                 "_rank": (
+                    1 if personal_signal or tool_signal else 0,
                     1 if str(item.get("message_id") or "") in priority_ids else 0,
                     3 if assessment["state"] == "reviewable" else (
-                        2 if information or item.get("_transcribed_voice") is True else 1
+                        2 if information or item.get("_transcribed_voice") is True or short_context_signal else 1
                     ),
                     int(information.get("score") or 0) if information else 0,
                     level_rank,

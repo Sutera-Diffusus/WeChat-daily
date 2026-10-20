@@ -2,6 +2,7 @@ import http.client
 import json
 import threading
 import time
+from types import SimpleNamespace
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -26,6 +27,22 @@ from wechat_bridge.web import (
     _finding_unsupported_narrative_claims,
     start_dashboard_thread,
 )
+
+
+def test_directional_transfer_requires_cited_source_message():
+    finding = {"summary": "小林把项目交接工作转交用户。"}
+    unrelated = [
+        {"sender_name": "小林", "content": "群里有详细的通知。"},
+        {"sender_name": "我", "content": "后面可能要把材料交给小林。"},
+    ]
+    assert {item["kind"] for item in _finding_unsupported_narrative_claims(
+        finding, unrelated
+    )} == {"transfer_direction"}
+
+    supported = [
+        {"sender_name": "小林", "content": "项目交接工作要转给你，我发你资料。"},
+    ]
+    assert _finding_unsupported_narrative_claims(finding, supported) == []
 
 
 def test_headline_from_summary_uses_evidence_led_editorial_pattern_without_speaker_prefix():
@@ -439,6 +456,82 @@ def _request(server, method, path, body=None):
         return response.status, json.loads(response.read().decode("utf-8"))
     finally:
         connection.close()
+
+
+def test_ai_identity_carries_operator_brief_scope(running_workbench):
+    server, _store = running_workbench
+    server.settings.update({"profile": {
+        "self_name": "测试用户",
+        "topics": ["GPT Luna Max", "DeepSeek V4.1 Flash"],
+        "brief_scope": "本人待办与明确风险",
+    }})
+    identity = BridgeRequestHandler._user_identity(SimpleNamespace(server=server))
+    assert identity["display_name"] == "测试用户"
+    assert identity["topics"] == ["GPT Luna Max", "DeepSeek V4.1 Flash"]
+    assert identity["brief_scope"] == "本人待办与明确风险"
+
+
+def test_quote_mode_api_returns_source_quotes_without_model_prose(running_workbench, monkeypatch):
+    server, _store = running_workbench
+    server.settings.update({
+        "profile": {"self_name": "测试用户", "topics": ["GPT Luna Max"]},
+        "ai": {"model": "test-model", "api_key": "test-key"},
+    })
+
+    def fake_model(_instructions, items):
+        chosen = next(item for item in items if "确认项目报价" in item["content"])
+        return {"stories": [{"topic": "报价确认", "refs": [chosen["ref"]]}]}
+
+    monkeypatch.setattr(web_module, "openai_quote_model", lambda *_args: fake_model)
+    status, payload = _request(server, "POST", "/api/ai-analysis", {
+        "start": "2026-08-21", "end": "2026-08-21", "confirm": True,
+        "quote_mode": True, "limit": 120,
+    })
+    assert status == 200
+    assert payload["source"] == "ai_quote_selection"
+    assert payload["llm_accepted"] is True
+    assert payload["analysis"]["findings"][0]["presentation_mode"] == "source_quotes"
+    assert payload["analysis"]["findings"][0]["evidence"][0]["content"] == "请今天确认项目报价并回复我？"
+    assert payload["will_send"] is False
+
+
+def test_quote_mode_accepts_empty_day_without_local_fallback(running_workbench, monkeypatch):
+    server, _store = running_workbench
+    server.settings.update({
+        "profile": {"self_name": "测试用户", "topics": ["GPT Luna Max"]},
+        "ai": {"model": "test-model", "api_key": "test-key"},
+    })
+    monkeypatch.setattr(web_module, "openai_quote_model", lambda *_args: lambda *_: {"stories": []})
+    status, payload = _request(server, "POST", "/api/ai-analysis", {
+        "start": "2026-08-21", "end": "2026-08-21", "confirm": True,
+        "quote_mode": True, "limit": 120,
+    })
+    assert status == 200
+    assert payload["source"] == "ai_quote_selection"
+    assert payload["provider_status"] == "succeeded"
+    assert payload["llm_accepted"] is True
+    assert payload["fallback_reason"] is None
+    assert payload["analysis"]["findings"] == []
+
+
+def test_quote_mode_reports_provider_quota_exhaustion(running_workbench, monkeypatch):
+    server, _store = running_workbench
+    server.settings.update({"ai": {"model": "test-model", "api_key": "test-key"}})
+
+    class QuotaError(RuntimeError):
+        status_code = 402
+
+    def exhausted(*_):
+        raise QuotaError("quota")
+
+    monkeypatch.setattr(web_module, "openai_quote_model", lambda *_args: exhausted)
+    status, payload = _request(server, "POST", "/api/ai-analysis", {
+        "start": "2026-08-21", "end": "2026-08-21", "confirm": True,
+        "quote_mode": True, "limit": 120,
+    })
+    assert status == 402
+    assert payload["fallback_reason"] == "provider_quota_exhausted"
+    assert "额度不足" in payload["message"]
 
 
 @pytest.mark.parametrize(
@@ -2069,6 +2162,8 @@ def test_ai_analysis_keeps_local_insights_when_model_returns_no_findings(
 
     assert status == 200
     assert value["source"] == "ai_assisted_with_local_fallback"
+    assert value["llm_accepted"] is False
+    assert value["fallback_reason"] == "local_fallback"
     # 本地保底证据以一行线索的形式保留，不再被包装成模板正文卡片。
     assert value["analysis"]["findings"] == []
     leads = value["analysis"]["leads"]

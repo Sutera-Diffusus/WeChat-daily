@@ -45,7 +45,9 @@ from .fact_check import HttpSearchProvider, check_claims
 from .image_key import request_image_key_discovery, runtime_image_key
 from .media import MediaUnavailable, V2_MAGIC, cache_key, read_media
 from .models import IncomingMessage
+from .quote_brief_selector import QuoteSelectionError, openai_quote_model, select_quote_cards
 from .settings import WorkbenchSettings
+from .source_identity import repair_synced_self_attribution
 from .shadow_semantic import ShadowSemanticRunStore
 from .shadow_run_v28 import load_shadow_catalog
 from .timeutil import get_timezone
@@ -489,6 +491,36 @@ _NARRATIVE_NUMBER = re.compile(
     r"(?<![A-Za-z0-9.])\d+(?:\.\d+)?(?![A-Za-z0-9.])"
 )
 
+_DIRECTIONAL_TRANSFER = re.compile(
+    r"(?:^|[，。；;：:\s])(?P<actor>[\u4e00-\u9fff]{2,8})"
+    r"(?:把|将)(?P<object>[^，。；;]{2,35}?)"
+    r"(?:转交|移交|交给|转给)(?P<target>[\u4e00-\u9fff]{1,12})"
+)
+
+
+def _transfer_direction_supported(
+    actor: str, object_text: str, target: str,
+    evidence: Sequence[Mapping[str, Any]],
+) -> bool:
+    object_text = re.sub(r"\s+", "", object_text)
+    object_terms = {
+        object_text[index:index + 3]
+        for index in range(max(0, len(object_text) - 2))
+    } or {object_text}
+    target_terms = {"你", "您", "用户"} if target.startswith(("用户", "你", "您")) else {target[:2]}
+    for item in evidence:
+        content = str(item.get("content") or "")
+        sender = str(item.get("sender_name") or "")
+        if actor != sender and actor not in content:
+            continue
+        if not any(term in content for term in object_terms):
+            continue
+        if not re.search(r"转交|移交|交给|转给|转.*给", content):
+            continue
+        if any(term in content for term in target_terms):
+            return True
+    return False
+
 _NARRATIVE_CAUSAL = re.compile(
     r"导致|造成|使得|致使|源于|归因于|主因|因为|所以|因此|从而|带来"
 )
@@ -817,6 +849,14 @@ def _finding_unsupported_narrative_claims(
         "what_changed", "why_it_matters",
     ):
         for sentence in _NARRATIVE_SENTENCE.findall(str(finding.get(field) or "")):
+            for transfer in _DIRECTIONAL_TRANSFER.finditer(sentence):
+                if not _transfer_direction_supported(
+                    transfer.group("actor"),
+                    transfer.group("object"),
+                    transfer.group("target"),
+                    evidence,
+                ):
+                    flag("transfer_direction", transfer.group(0).strip())
             match = _NARRATIVE_CAUSAL.search(sentence)
             if match and not _causal_claim_supported(sentence, evidence):
                 flag("causality", match.group(0))
@@ -1909,7 +1949,7 @@ class BridgeRequestHandler(BaseHTTPRequestHandler):
     def _analysis_enrich(self, items: Sequence[Mapping[str, Any]]) -> List[Dict[str, Any]]:
         """Promote available voice transcripts to analyzable text on copied rows."""
 
-        values = self._voice_enrich(items)
+        values = self._voice_enrich(repair_synced_self_attribution(items))
         for item in values:
             if str(item.get("message_type") or "").lower() != "voice":
                 continue
@@ -3828,12 +3868,15 @@ class BridgeRequestHandler(BaseHTTPRequestHandler):
             for value in (profile.get("organizations") or [])
             if str(value).strip()
         ][:8]
+        topics = [str(value).strip() for value in (profile.get("topics") or []) if str(value).strip()][:8]
         return {
             "display_name": display,
             "adapter_display_name": adapter_name,
             "configured": bool(configured),
             "roles": roles,
             "organizations": organizations,
+            "topics": topics,
+            "brief_scope": str(profile.get("brief_scope") or "").strip()[:240],
             "note": "候选中 is_self=true 的消息均由用户本人发出；整份简报以用户本人为主体视角。",
         }
 
@@ -4277,6 +4320,84 @@ class BridgeRequestHandler(BaseHTTPRequestHandler):
                 finding[key] = "%s的原文涉及该事项；当前未形成独立编辑归纳，证据已保留供回看。" % sender
         return finding
 
+    def _quote_ai_analysis(
+        self,
+        body: Mapping[str, Any],
+        candidates: Sequence[Mapping[str, Any]],
+        messages: Sequence[Mapping[str, Any]],
+        start_day: date,
+        end_day: date,
+    ) -> None:
+        settings = self.server.settings.snapshot(include_secrets=True)
+        ai_settings = settings.get("ai") or {}
+        profile = settings.get("profile") or {}
+        model = str(ai_settings.get("model") or "").strip()
+        api_key = str(ai_settings.get("api_key") or "").strip()
+        if not model or not api_key:
+            return self._json({"error": "ai_not_configured", "message": "请先配置 AI 模型与密钥"}, 409)
+        try:
+            result = select_quote_cards(
+                candidates,
+                {str(row.get("message_id") or ""): row for row in messages},
+                profile,
+                openai_quote_model(model, api_key, str(ai_settings.get("base_url") or "") or None),
+            )
+        except QuoteSelectionError as exc:
+            quota_exhausted = str(exc) == "quote_selection_quota_exhausted"
+            return self._json({
+                "error": "ai_quote_selection_failed",
+                "message": "AI 服务额度不足，请补充额度后重试" if quota_exhausted else str(exc),
+                "llm_accepted": False,
+                "fallback_reason": "provider_quota_exhausted" if quota_exhausted else "provider_or_selection_failed",
+            }, 402 if quota_exhausted else 502)
+        cards = result["cards"]
+        findings = [
+            {
+                "title": "话题：" + str(card["topic"]),
+                "presentation_mode": "source_quotes",
+                "claim_label": (
+                    "聊天原文及语音转写"
+                    if any(item.get("source_kind") == "voice_transcript" for item in card["evidence"])
+                    else "聊天原文"
+                ),
+                "claim_boundary": card["boundary"],
+                "evidence": card["evidence"],
+                "evidence_message_ids": card["evidence_message_ids"],
+                "candidate_ids": card["candidate_ids"],
+            }
+            for card in cards
+        ]
+        payload = {
+            "ok": True,
+            "source": "ai_quote_selection",
+            "provider_status": "succeeded",
+            "llm_accepted": True,
+            "fallback_reason": None,
+            "model": model,
+            "candidate_count": len(candidates),
+            "quote_audit": result["audit"],
+            "window": {
+                "start": start_day.isoformat(),
+                "end": end_day.isoformat(),
+                "timezone": self.server.service.policy.timezone_name,
+            },
+            "analysis": {
+                "situation": "从聊天中提取有独立阅读价值的信息；卡片逐条引用聊天原文。",
+                "findings": findings,
+                "leads": [],
+                "themes": [],
+                "user_identity": self._user_identity(),
+            },
+            "will_send": False,
+            "creates_reply_tasks": False,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        key = "%s|%s" % (start_day.isoformat(), end_day.isoformat())
+        with self.server.ai_analysis_lock:
+            self.server.latest_ai_analysis = payload
+            self.server.ai_analysis_by_window[key] = payload
+        return self._json(payload)
+
     def _ai_analysis(self, body: Dict[str, Any]) -> None:
         if body.get("confirm") is not True:
             return self._json(
@@ -4325,7 +4446,14 @@ class BridgeRequestHandler(BaseHTTPRequestHandler):
             for message_id in list(matter.get("message_ids") or [])[:6]
             if message_id
         )
-        candidates = build_ai_context(messages, candidate_limit, priority_message_ids)
+        candidates = build_ai_context(
+            messages,
+            candidate_limit,
+            priority_message_ids,
+            profile=(self.server.settings.snapshot().get("profile") or {}),
+        )
+        if body.get("quote_mode") is True:
+            return self._quote_ai_analysis(body, candidates, messages, start_day, end_day)
         generator = self._ai_generator()
         window = {
             "start": start_day.isoformat(),

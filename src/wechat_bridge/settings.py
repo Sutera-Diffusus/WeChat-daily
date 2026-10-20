@@ -98,6 +98,7 @@ class WorkbenchSettings:
             },
             "profile": {
                 "self_name": "",
+                "brief_scope": "",
                 "roles": [],
                 "projects": [],
                 "organizations": [],
@@ -223,6 +224,7 @@ class WorkbenchSettings:
         # ``self_name`` lets the operator pin who "我" is in the brief even
         # when the adapter cannot read the logged-in account's nickname.
         profile["self_name"] = str(profile.get("self_name") or "").strip()[:60]
+        profile["brief_scope"] = str(profile.get("brief_scope") or "").strip()[:240]
         for key in ("roles", "projects", "organizations", "key_contacts", "topics", "suggestions"):
             raw_values = profile.get(key) if isinstance(profile.get(key), list) else []
             profile[key] = list(dict.fromkeys(

@@ -123,7 +123,10 @@ def test_analysis_profile_and_voice_settings_are_bounded_and_masked(tmp_path):
     value = settings.update(
         {
             "analysis": {"interval_ms": 10, "message_threshold": 0},
-            "profile": {"projects": ["选课", "选课", "微信工作台"]},
+            "profile": {
+                "projects": ["选课", "选课", "微信工作台"],
+                "brief_scope": "本人待办、明确风险、与我使用有关的 AI 工具变化",
+            },
             "voice": {
                 "enabled": True,
                 "app_id": "test-app",
@@ -136,6 +139,7 @@ def test_analysis_profile_and_voice_settings_are_bounded_and_masked(tmp_path):
     assert value["analysis"]["interval_ms"] == 60_000
     assert value["analysis"]["message_threshold"] == 1
     assert value["profile"]["projects"] == ["选课", "微信工作台"]
+    assert value["profile"]["brief_scope"] == "本人待办、明确风险、与我使用有关的 AI 工具变化"
     assert value["voice"]["access_token_configured"] is True
     assert value["voice"]["secret_key_configured"] is True
     assert "access_token" not in value["voice"]

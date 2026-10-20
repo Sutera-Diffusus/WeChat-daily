@@ -261,14 +261,15 @@
     }, 900);
   }
 
-  function finishAiTaskStatus(detail, failed) {
+  function finishAiTaskStatus(detail, failed, fallback) {
     if (state.aiProgressTimer) window.clearInterval(state.aiProgressTimer);
     state.aiProgressTimer = null;
-    updateAiTaskStatus(failed ? "AI 分析未完成" : "AI 分析完成", detail || (failed ? "请检查配置后重试" : "最新内容已编入日报"), 100, failed ? "error" : "done");
+    const title = fallback ? "AI 未生成合格日报" : failed ? "AI 分析未完成" : "AI 分析完成";
+    updateAiTaskStatus(title, detail || (failed ? "请检查配置后重试" : "最新内容已编入日报"), 100, failed ? "error" : fallback ? "fallback" : "done");
     state.aiStatusHideTimer = window.setTimeout(() => {
       const box = $("#ai-task-status");
       if (box) box.hidden = true;
-    }, failed ? 6500 : 2600);
+    }, failed || fallback ? 6500 : 2600);
   }
 
   function beginOperation(label, detail, percent) {
@@ -698,9 +699,11 @@
   function renderAiFreshness(value) {
     const node = $("#analysis-refresh-time"); if (!node) return;
     if (state.aiRunning) { node.textContent = "分析中…"; node.title = "正在生成最新简报"; return; }
-    const timestamp = value && value.generated_at ? Date.parse(value.generated_at) : state.lastAiRun;
-    node.textContent = timestamp ? formatTime(new Date(timestamp).toISOString(), true) : "等待分析";
-    node.title = timestamp ? "上次 AI 分析：" + new Date(timestamp).toLocaleString("zh-CN") : "尚未运行 AI 分析";
+    const latest = value || state.aiResult;
+    const timestamp = latest && latest.generated_at ? Date.parse(latest.generated_at) : state.lastAiRun;
+    const accepted = aiResultAccepted(latest);
+    node.textContent = timestamp ? (accepted ? "" : "未生成合格日报 · ") + formatTime(new Date(timestamp).toISOString(), true) : "等待分析";
+    node.title = timestamp ? (accepted ? "上次 AI 分析：" : "上次 AI 尝试未生成合格日报：") + new Date(timestamp).toLocaleString("zh-CN") : "尚未运行 AI 分析";
   }
 
   function updateHeader() {
@@ -882,23 +885,24 @@
   function collectEvents(insights) {
     const sources = [];
     const census = isCensusRange();
-    ["for_me", "trending", "pending_review", "event_briefs", "primary_insights"].forEach((key) => (insights[key] || []).forEach((event) => {
+    const evidenceBrief = state.aiResult && state.aiResult.source === "ai_quote_selection" && aiResultAccepted(state.aiResult);
+    if (!evidenceBrief) ["for_me", "trending", "pending_review", "event_briefs", "primary_insights"].forEach((key) => (insights[key] || []).forEach((event) => {
       const title = String(event.title || "");
       if (!census && Number(event.importance || 0) < 65) return;
       if (!census && /(?:感觉|觉得|一样|聊明白|我昨天发现|会暴毙吗)/i.test(title)) return;
       sources.push(Object.assign({}, event, { lane: event.lane || (key === "for_me" ? "for_me" : key === "trending" ? "trending" : key === "pending_review" ? "pending" : "") }));
     }));
-    if (!sources.length) (insights.events || []).forEach((event) => sources.push(event));
+    if (!evidenceBrief && !sources.length) (insights.events || []).forEach((event) => sources.push(event));
     const aiFindings = state.aiResult && state.aiResult.analysis && state.aiResult.analysis.findings || [];
     aiFindings.forEach((finding, index) => {
       if (!aiResultAccepted(state.aiResult)) return;
       const rawEvidence = Array.isArray(finding.evidence) ? finding.evidence : [];
-      const quoteOnly = finding.presentation_mode === "recovered_quote_card";
+      const quoteOnly = finding.presentation_mode === "recovered_quote_card" || finding.presentation_mode === "source_quotes";
       if ((!quoteOnly && !finding.why_it_matters) || !rawEvidence.length) return;
       const categoryWeight = ({ risk: 10, event: 8, progress: 7, knowledge: 5, theme: 4, resource: 2, question: 1 })[String(finding.category || "").toLowerCase()] || 3;
       const draftedPriority = 48 + Math.min(15, rawEvidence.length * 3) + categoryWeight + (String(finding.narrative || "").length >= 150 ? 4 : 0);
       const effectiveImportance = Number(finding.importance || 0) < 50 ? draftedPriority : Number(finding.importance || 0);
-      if (effectiveImportance < 55 || Number(finding.confidence || 0) < 55) return;
+      if (!quoteOnly && (effectiveImportance < 55 || Number(finding.confidence || 0) < 55)) return;
       const evidence = rawEvidence.filter((item) => item && typeof item === "object").map((item) => Object.assign({}, item, { quote: item.content }));
       const chatIds = new Set(evidence.map((item) => item.chat_name).filter(Boolean));
       const participantIds = new Set(evidence.map((item) => item.sender_name).filter(Boolean));
@@ -908,7 +912,7 @@
        const claimUnverified = claimType !== "externally_verified";
        const claimTags = stringList(finding.keywords).concat(stringList([finding.category, finding.value_type]));
        if (finding.claim_label) claimTags.push(String(finding.claim_label));
-       const quoteSummary = quoteOnly ? evidence.map((item) => (item.sender_name ? item.sender_name + "：" : "") + "“" + String(item.content || item.quote || "") + "”").join("；") : finding.summary;
+       const quoteSummary = quoteOnly ? evidence.map((item) => (item.sender_name ? item.sender_name + "：" : "") + (item.source_kind === "voice_transcript" ? "（语音转写）" : "") + "“" + String(item.content || item.quote || "") + "”").join("；") : finding.summary;
        sources.push({ id: "ai:" + index + ":" + (finding.title || "finding"), title: finding.title, summary: quoteSummary, narrative: quoteOnly ? quoteSummary : (finding.narrative || finding.summary), what_changed: quoteOnly ? undefined : finding.what_changed, why_it_matters: quoteOnly ? undefined : finding.why_it_matters, uncertainty: quoteOnly ? undefined : finding.uncertainty, next_step: quoteOnly ? undefined : finding.next_step, core_conclusion: quoteOnly ? undefined : (finding.core_conclusion || finding.why_it_matters), claim_type: claimType, claim_status: finding.claim_status || "unverified_chat", claim_label: finding.claim_label || "聊天事实陈述", claim_boundary: finding.claim_boundary || "聊天证据尚未联网核验。", importance: effectiveImportance, confidence: finding.confidence, status: claimUnverified ? "pending" : "confirmed", lane: personal ? "for_me" : (chatIds.size >= 2 || groupDiscussion ? "trending" : "pending"), tags: claimTags, evidence, participants: Array.isArray(finding.participants) ? finding.participants : [], speakers: Array.isArray(finding.speakers) ? finding.speakers : [], is_ai_brief: true });
     });
     const map = new Map();
@@ -1197,7 +1201,7 @@
       || null;
     const remaining = lead ? events.filter((event) => event._key !== lead._key) : events;
     const personal = remaining.filter((event) => event._lane === "personal");
-    const topics = remaining.filter((event) => event.is_ai_brief ? Number(event.importance || 0) >= 60 : Number(event.importance || 0) >= 70);
+    const topics = remaining.filter((event) => event.is_ai_brief && state.aiResult && state.aiResult.source === "ai_quote_selection" ? true : event.is_ai_brief ? Number(event.importance || 0) >= 60 : Number(event.importance || 0) >= 70);
     const trending = topics;
     const pending = remaining.filter((event) => event._lane === "pending");
     const reportPage = $("#overview");
@@ -1436,8 +1440,9 @@
     const renderLeadGroup = (label, items) => items.length ? '<div class="ai-leads-group"><div class="ai-leads-head">' + escapeHtml(label) + " · " + items.length + " 条</div>" + items.map((lead) => { const quotes = Array.isArray(lead.quotes) ? lead.quotes : []; if (!quotes.length) return '<div class="ai-lead"><span class="ai-lead-text">' + escapeHtml(lead.title || "") + "</span></div>"; return quotes.map((quote) => '<div class="ai-lead"><span class="ai-lead-who">' + escapeHtml(quote.sender_name || "待识别") + '</span><span class="ai-lead-text">' + escapeHtml(quote.content || lead.title || "") + '</span><span class="ai-lead-where">' + escapeHtml(quote.chat_name || "") + "</span></div>").join(""); }).join("") + "</div>" : "";
     const recoveredLeads = leads.filter((lead) => lead && lead.recovered === true); const modelLeads = leads.filter((lead) => !lead || lead.recovered !== true);
     const leadHtml = leads.length ? '<div class="ai-leads"><div class="ai-leads-head">线索速览 · ' + leads.length + " 条</div>" + renderLeadGroup("模型单句线索", modelLeads) + renderLeadGroup("本地证据补回", recoveredLeads) + "</div>" : "";
-    const findingHtml = findings.map((item) => { const rawEvidence = Array.isArray(item.evidence) ? item.evidence : []; const evidence = rawEvidence.slice(0, 4).map((source) => source && source.message_id ? '<button class="ai-evidence" data-open-message="' + escapeHtml(source.message_id) + '" type="button">' + escapeHtml(source.evidence_ref || source.sender_name || "证据") + "</button>" : "").join(""); const boundary = item.claim_boundary || item.uncertainty; const quoteOnly = item.presentation_mode === "recovered_quote_card"; const quoteBody = quoteOnly ? '<div class="ai-leads-group">' + rawEvidence.map((quote) => '<div class="ai-lead"><span class="ai-lead-who">' + escapeHtml(quote.sender_name || "待识别") + '</span><span class="ai-lead-text">' + escapeHtml(quote.content || "") + '</span><span class="ai-lead-where">' + escapeHtml(quote.chat_name || "") + "</span></div>").join("") + "</div>" : ""; return '<article class="ai-finding"><div class="ai-finding-top"><strong>' + escapeHtml(item.title || "分析事项") + '</strong><span>' + escapeHtml(String(item.claim_label || "待核实")) + " · " + escapeHtml(String(item.confidence == null ? "" : item.confidence)) + "</span></div>" + (quoteOnly ? quoteBody : '<p class="ai-finding-summary">' + escapeHtml(item.summary || item.reason || "") + "</p>" + eventSpeakersHtml(item) + (item.what_changed ? '<div class="ai-finding-detail"><b>变化</b><span>' + escapeHtml(item.what_changed) + "</span></div>" : "") + (item.why_it_matters ? '<div class="ai-finding-detail"><b>意义</b><span>' + escapeHtml(item.why_it_matters) + "</span></div>" : "")) + (boundary ? '<div class="ai-finding-boundary"><b>证据边界</b><span>' + escapeHtml(boundary) + "</span></div>" : "") + (!quoteOnly && item.next_step ? '<div class="ai-finding-next">下一步：' + escapeHtml(item.next_step) + "</div>" : "") + (evidence ? '<div class="ai-finding-evidence">' + evidence + "</div>" : "") + "</article>"; }).join("");
-    box.hidden = false; box.className = "ai-analysis-result"; box.innerHTML = '<div class="ai-result-head"><strong>' + escapeHtml(aiResultAccepted(value) ? "AI 辅助" : "本地保留") + '</strong><span>' + escapeHtml(value.model || "模型") + " · " + formatNumber(value.candidate_count || 0) + " 条候选</span>" + (subject ? '<span class="ai-result-subject">本期为 ' + escapeHtml(subject) + ' 整理</span>' : "") + "</div>" + (analysis.situation ? '<p class="ai-result-brief">' + escapeHtml(analysis.situation) + "</p>" : "") + (themes.length ? '<div class="ai-themes">' + themes.slice(0, 8).map((theme) => '<span class="ai-theme">' + escapeHtml(theme) + "</span>").join("") + "</div>" : "") + (findingHtml || '<p class="ai-result-brief">暂无新增判断。</p>') + leadHtml;
+    const findingHtml = findings.map((item) => { const rawEvidence = Array.isArray(item.evidence) ? item.evidence : []; const evidence = rawEvidence.slice(0, 4).map((source) => source && source.message_id ? '<button class="ai-evidence" data-open-message="' + escapeHtml(source.message_id) + '" type="button">' + escapeHtml(source.evidence_ref || source.sender_name || "证据") + "</button>" : "").join(""); const boundary = item.claim_boundary || item.uncertainty; const quoteOnly = item.presentation_mode === "recovered_quote_card" || item.presentation_mode === "source_quotes"; const quoteBody = quoteOnly ? '<div class="ai-leads-group">' + rawEvidence.map((quote) => '<div class="ai-lead"><span class="ai-lead-who">' + escapeHtml(quote.sender_name || "待识别") + '</span><span class="ai-lead-text">' + escapeHtml(quote.content || "") + '</span><span class="ai-lead-where">' + escapeHtml(quote.chat_name || "") + "</span></div>").join("") + "</div>" : ""; return '<article class="ai-finding"><div class="ai-finding-top"><strong>' + escapeHtml(item.title || "分析事项") + '</strong><span>' + escapeHtml(String(item.claim_label || "待核实")) + " · " + escapeHtml(String(item.confidence == null ? "" : item.confidence)) + "</span></div>" + (quoteOnly ? quoteBody : '<p class="ai-finding-summary">' + escapeHtml(item.summary || item.reason || "") + "</p>" + eventSpeakersHtml(item) + (item.what_changed ? '<div class="ai-finding-detail"><b>变化</b><span>' + escapeHtml(item.what_changed) + "</span></div>" : "") + (item.why_it_matters ? '<div class="ai-finding-detail"><b>意义</b><span>' + escapeHtml(item.why_it_matters) + "</span></div>" : "")) + (boundary ? '<div class="ai-finding-boundary"><b>证据边界</b><span>' + escapeHtml(boundary) + "</span></div>" : "") + (!quoteOnly && item.next_step ? '<div class="ai-finding-next">下一步：' + escapeHtml(item.next_step) + "</div>" : "") + (evidence ? '<div class="ai-finding-evidence">' + evidence + "</div>" : "") + "</article>"; }).join("");
+    const emptyBrief = value.source === "ai_quote_selection" && aiResultAccepted(value) ? "今天没有提取到有独立阅读价值的聊天卡片。" : "暂无新增判断。";
+    box.hidden = false; box.className = "ai-analysis-result"; box.innerHTML = '<div class="ai-result-head"><strong>' + escapeHtml(aiResultAccepted(value) ? "AI 辅助" : "本地保留") + '</strong><span>' + escapeHtml(value.model || "模型") + " · " + formatNumber(value.candidate_count || 0) + " 条候选</span>" + (subject ? '<span class="ai-result-subject">本期为 ' + escapeHtml(subject) + ' 整理</span>' : "") + "</div>" + (analysis.situation ? '<p class="ai-result-brief">' + escapeHtml(analysis.situation) + "</p>" : "") + (themes.length ? '<div class="ai-themes">' + themes.slice(0, 8).map((theme) => '<span class="ai-theme">' + escapeHtml(theme) + "</span>").join("") + "</div>" : "") + (findingHtml || '<p class="ai-result-brief">' + escapeHtml(emptyBrief) + '</p>') + leadHtml;
   }
 
   async function runAiAnalysis(silent) {
@@ -1446,7 +1451,26 @@
     beginAiTaskStatus(Boolean(silent));
     if (!silent) beginOperation("AI 分析「" + rangeLabel() + "」", "准备脱敏候选与语音转写", 8);
     aiButtons().forEach((button) => { button.disabled = true; button.dataset.originalLabel = button.innerHTML; button.innerHTML = "<span>✦</span><b>分析中…</b>"; }); renderAiFreshness();
-    try { if (!silent) updateOperation(null, "模型正在归纳主线", 36); updateAiTaskStatus(null, "模型正在归纳主线与跨会话联系", 42, "running"); const value = await request("/api/ai-analysis", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ start: state.start, end: state.end, limit: 120, confirm: true, force: !silent }), timeoutMs: 300000 }); state.aiResult = value; state.lastAiRun = Date.parse(value.generated_at || "") || Date.now(); state.lastAiMessageCount = state.messages.length; updateAiTaskStatus(null, "核对证据并重排日报版面", 92, "running"); if (!silent) updateOperation(null, "核对证据并编排版面", 91); renderAiResult(value); renderAiFreshness(value); renderOverview(); renderAnalysis(); finishAiTaskStatus("最新分析已写入当前日报", false); if (!silent) { showNotice("AI 分析已完成", false); await finishOperation("AI 简报已更新", false); } }
+    try {
+      if (!silent) updateOperation(null, "模型正在归纳主线", 36);
+      updateAiTaskStatus(null, "模型正在归纳主线与跨会话联系", 42, "running");
+      const value = await request("/api/ai-analysis", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ start: state.start, end: state.end, limit: 120, quote_mode: true, confirm: true, force: !silent }), timeoutMs: 900000 });
+      state.aiResult = value;
+      state.lastAiRun = Date.parse(value.generated_at || "") || Date.now();
+      state.lastAiMessageCount = state.messages.length;
+      updateAiTaskStatus(null, "核对证据并重排日报版面", 92, "running");
+      if (!silent) updateOperation(null, "核对证据并编排版面", 91);
+      renderAiResult(value);
+      renderAiFreshness(value);
+      renderOverview();
+      renderAnalysis();
+      const accepted = aiResultAccepted(value);
+      finishAiTaskStatus(accepted ? "最新分析已写入当前日报" : "已保留本地规则内容，可查看证据并稍后重试", false, !accepted);
+      if (!silent) {
+        showNotice(accepted ? "AI 分析已完成" : "AI 未生成合格日报，已保留本地规则内容", !accepted);
+        await finishOperation(accepted ? "AI 简报已更新" : "AI 未生成合格日报", !accepted);
+      }
+    }
     catch (error) { $("#ai-analysis-result").hidden = false; $("#ai-analysis-result").className = "ai-analysis-result error"; $("#ai-analysis-result").textContent = error.message; showNotice("AI 分析未完成", true); finishAiTaskStatus(error.message, true); if (!silent) await finishOperation(error.message, true); }
     finally { state.aiRunning = false; const configured = Boolean(state.aiStatus && (state.aiStatus.configured || state.aiStatus.api_key_configured)); aiButtons().forEach((button) => { button.disabled = !configured; button.innerHTML = button.id === "ai-analysis-home-button" ? "<span>✦</span><b>AI 分析</b>" : "运行 AI 分析"; }); renderAiFreshness(); }
   }

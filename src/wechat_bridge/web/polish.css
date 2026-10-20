@@ -2087,6 +2087,7 @@ body.sidebar-hidden .main-content { margin-left: 0 !important; }
   background: repeating-linear-gradient(120deg, transparent 0 20px, rgba(255,255,255,.1) 20px 22px);
 }
 .ai-task-status[data-state="done"] { background: #31df76; }
+.ai-task-status[data-state="fallback"] { background: #ffbf69; }
 .ai-task-status[data-state="error"] { background: #ff6b72; }
 .ai-task-signal {
   position: relative;

@@ -47,6 +47,53 @@ def test_nearby_context_can_complete_an_objectless_request():
     assert result["actions"][0]["reason"] == "请求对象由同一会话的邻近上下文补足"
 
 
+def test_ai_context_keeps_short_handoff_and_quota_change_with_context():
+    messages = [
+        _item("handoff", "项目群", "有一个资料整理工作要转给你", 0),
+        _item("quota", "技术群", "感觉额度缩减了", 1),
+        _item("smalltalk", "闲聊群", "嗯嗯好", 2),
+    ]
+    candidates = build_ai_context(messages)
+    selected = {item["_source_message_id"] for item in candidates}
+    assert {"handoff", "quota"} <= selected
+    assert "smalltalk" not in selected
+
+
+def test_ai_context_profile_keeps_user_assignment_and_used_tool_fault():
+    messages = [
+        _item("assignment", "班级群", "麻烦永捷做一下道具吧@吴永捷", 0, True),
+        _item("fault", "技术群", "GPT 一直报 502，今天无法继续使用", 1, True),
+        _item("other", "其他群", "确认明天开会需要完成议程整理", 2, True),
+    ]
+    selected = build_ai_context(
+        messages,
+        max_items=2,
+        priority_message_ids={"other"},
+        profile={"self_name": "吴永捷", "topics": ["GPT Luna Max", "DeepSeek V4.1 Flash"]},
+    )
+    assert {item["_source_message_id"] for item in selected} == {"assignment", "fault"}
+
+
+def test_ai_context_keeps_own_repeated_tool_failure_under_limit():
+    own = _item("own-gpt", "技术群", "GPT现在完全听不懂要求并且死活不改", 0, True)
+    own["is_self"] = True
+    routine = [_item(f"routine-{i}", "项目群", f"今天要确认第{i}个接口方案", i + 1, True) for i in range(20)]
+    selected = build_ai_context(
+        [own, *routine], max_items=2,
+        profile={"self_name": "吴永捷", "topics": ["GPT Luna Max", "DeepSeek V4.1 Flash"]},
+    )
+    assert "own-gpt" in {item["_source_message_id"] for item in selected}
+
+
+def test_ai_context_redacts_embedded_api_key_before_model_input():
+    secret = "sk-" + "b" * 40
+    item = _item("key", "技术群", f"DeepSeek V4.1 Flash 试用密钥 {secret}", 0, True)
+    selected = build_ai_context([item], profile={"topics": ["DeepSeek V4.1 Flash"]})
+    assert len(selected) == 1
+    assert secret not in str(selected)
+    assert "[API 密钥]" in selected[0]["content"]
+
+
 def test_contextual_risk_clause_is_not_promoted_as_a_standalone_highlight():
     start = datetime(2026, 8, 21, tzinfo=timezone.utc)
     messages = [
