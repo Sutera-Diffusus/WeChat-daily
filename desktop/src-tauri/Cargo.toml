@@ -1,6 +1,6 @@
-[package]
+﻿[package]
 name = "wei-daily-desktop"
-version = "0.1.4"
+version = "0.1.5"
 description = "微语 Tauri 2 desktop shell"
 authors = ["Wei Yu"]
 edition = "2021"

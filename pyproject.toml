@@ -1,10 +1,10 @@
-[build-system]
+﻿[build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "local-wechat-bridge"
-version = "0.1.4"
+version = "0.1.5"
 description = "A local-first WeChat intake, archive, intelligence, and read-only daily briefing service."
 readme = "README.md"
 requires-python = ">=3.9,<3.13"

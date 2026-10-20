@@ -1,7 +1,7 @@
-{
+﻿{
   "name": "wei-daily-desktop",
   "private": true,
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "微语 Tauri 2 桌面封装",
   "scripts": {
     "icons": "node scripts\\sync-brand.mjs && ..\\.venv\\Scripts\\python.exe scripts\\generate-icons.py",

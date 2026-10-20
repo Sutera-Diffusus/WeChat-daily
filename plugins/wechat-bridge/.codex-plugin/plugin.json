@@ -1,6 +1,6 @@
-{
+﻿{
   "name": "wechat-bridge",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "通过本地桥接服务读取微信状态、消息和回复预览。",
   "author": {
     "name": "Sutera-Diffusus"
